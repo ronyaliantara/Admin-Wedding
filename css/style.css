@@ -6135,10 +6135,15 @@ body {
   color: #FFF8E7 !important;
 }
 
-
 /* ==========================================================================
-   V21.6 SMARTPHONE BOUNDARY & OVERFLOW CONTAINMENT FIX
+   V21.7 SMARTPHONE BOUNDARY & FLEX SHRINK CONTAINMENT FIX
    ========================================================================== */
+
+/* Prevent Flexbox inside scrollable .modal-body from ever shrinking child cards vertically */
+.modal-body > *,
+.admin-modal-body > * {
+  flex-shrink: 0 !important;
+}
 
 .form-control,
 input.form-control,
@@ -6152,8 +6157,6 @@ textarea.form-control {
 
 select.form-control {
   text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
 }
 
 .event-location-form-card,
@@ -6161,8 +6164,13 @@ select.form-control {
 .form-row-grid,
 .form-row-2,
 .loc-card-row-grid {
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  height: auto !important;
+  min-height: min-content !important;
+  overflow: visible !important;
+  flex-shrink: 0 !important;
 }
 
 .form-row-grid > *,
@@ -6182,12 +6190,14 @@ select.form-control {
 
   .event-location-form-card {
     padding: 12px 12px !important;
-    overflow: hidden !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .operational-preset-picker {
     padding: 12px 12px !important;
-    overflow: hidden !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   #selectOperationalPackageTemplate,
@@ -6196,12 +6206,14 @@ select.form-control {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    flex: 1 1 100% !important;
+    flex: 0 0 100% !important;
+    height: auto !important;
   }
 
   #btnApplyOperationalTemplate,
   #btnAppendQuickRental {
     width: 100% !important;
+    flex: 0 0 100% !important;
     justify-content: center !important;
   }
 }

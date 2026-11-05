@@ -1966,7 +1966,6 @@ class WeddingApp {
     card.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.03)';
     card.style.maxWidth = '100%';
     card.style.boxSizing = 'border-box';
-    card.style.overflow = 'hidden';
 
     const locId = data ? data.id : `loc-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     card.dataset.locationId = locId;
@@ -4674,7 +4673,7 @@ function bootMahligaiApp() {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=21.6', { scope: './' })
+    navigator.serviceWorker.register('./sw.js?v=21.7', { scope: './' })
       .then((reg) => {
         reg.update();
         console.log('Mahligai WO PWA Service Worker aktif: ', reg.scope);

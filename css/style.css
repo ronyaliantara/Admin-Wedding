@@ -6134,3 +6134,74 @@ body {
   background: linear-gradient(135deg, #9A7432 0%, #6E4F19 100%) !important;
   color: #FFF8E7 !important;
 }
+
+
+/* ==========================================================================
+   V21.6 SMARTPHONE BOUNDARY & OVERFLOW CONTAINMENT FIX
+   ========================================================================== */
+
+.form-control,
+input.form-control,
+select.form-control,
+textarea.form-control {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+select.form-control {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.event-location-form-card,
+.operational-preset-picker,
+.form-row-grid,
+.form-row-2,
+.loc-card-row-grid {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.form-row-grid > *,
+.form-row-2 > *,
+.loc-card-row-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .loc-card-row-grid,
+  .form-row-grid,
+  .form-row-2 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .event-location-form-card {
+    padding: 12px 12px !important;
+    overflow: hidden !important;
+  }
+
+  .operational-preset-picker {
+    padding: 12px 12px !important;
+    overflow: hidden !important;
+  }
+
+  #selectOperationalPackageTemplate,
+  #selectQuickRentalAddon,
+  #selectShareRecipient {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+  }
+
+  #btnApplyOperationalTemplate,
+  #btnAppendQuickRental {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}

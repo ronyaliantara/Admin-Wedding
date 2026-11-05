@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mahligai-wo-pwa-v21.5';
+const CACHE_NAME = 'mahligai-wo-pwa-v21.6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

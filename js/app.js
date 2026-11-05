@@ -1964,6 +1964,9 @@ class WeddingApp {
     card.style.padding = '14px 16px';
     card.style.marginBottom = '12px';
     card.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.03)';
+    card.style.maxWidth = '100%';
+    card.style.boxSizing = 'border-box';
+    card.style.overflow = 'hidden';
 
     const locId = data ? data.id : `loc-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     card.dataset.locationId = locId;
@@ -1980,7 +1983,7 @@ class WeddingApp {
     const notes = data ? (data.notes || '') : '';
 
     card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:6px; border-bottom:1px dashed #E2E8F0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px dashed #E2E8F0;">
         <span class="loc-card-badge" style="font-weight:800; font-size:0.82rem; color:var(--gold-dark); background:#FAF6ED; padding:3px 10px; border-radius:6px; border:1px solid var(--gold-300);">
           ${this.escapeHtml(locName)}
         </span>
@@ -1988,14 +1991,14 @@ class WeddingApp {
       </div>
 
       <!-- Baris 1: Lokasi Manual & Waktu Jam Acara -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-        <div>
+      <div class="loc-card-row-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:10px;">
+        <div style="min-width:0; width:100%;">
           <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
             Lokasi (Manual) <span class="required">*</span>
           </label>
           <input type="text" class="form-control input-loc-name" value="${this.escapeHtml(locName)}" placeholder="Cth: Lokasi 1 / Lokasi 2 / Kediaman Mempelai" required>
         </div>
-        <div>
+        <div style="min-width:0; width:100%;">
           <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
             Waktu / Jam Acara <span class="required">*</span>
           </label>
@@ -4671,7 +4674,7 @@ function bootMahligaiApp() {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=21.5', { scope: './' })
+    navigator.serviceWorker.register('./sw.js?v=21.6', { scope: './' })
       .then((reg) => {
         reg.update();
         console.log('Mahligai WO PWA Service Worker aktif: ', reg.scope);

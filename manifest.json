@@ -1,0 +1,48 @@
+{
+  "id": "./",
+  "name": "Mahligai Wedding Organizer",
+  "short_name": "Mahligai WO",
+  "description": "Aplikasi Manajemen Acara Pernikahan, Database Kru & Briefing WhatsApp (100% Offline PWA)",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FDFBF7",
+  "theme_color": "#92400E",
+  "prefer_related_applications": false,
+  "categories": ["business", "lifestyle", "productivity"],
+  "icons": [
+    {
+      "src": "icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

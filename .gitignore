@@ -1,0 +1,11 @@
+# OS & Editor temporary files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.bak
+*.bak*
+*.tmp
+*.log
+.vscode/
+.idea/
+

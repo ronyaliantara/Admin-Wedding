@@ -709,50 +709,50 @@ function getInitialEvents() {
         {
           id: 'c-lani',
           name: 'Lani',
-          role: 'Asisten Lapangan / Runner',
-          phone: '082111223344',
-          email: 'lani@mahligaiwo.com',
-          notes: 'Pendamping ganti gaun 1, 2, 3 dan runner manten putri.'
+          role: 'Asisten',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-lia',
           name: 'Lia',
-          role: 'Asisten Lapangan / Runner',
-          phone: '082111223355',
-          email: 'lia@mahligaiwo.com',
-          notes: 'Standby penerima tamu dan souvenir.'
+          role: 'Asisten',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-dewi',
           name: 'Dewi',
-          role: 'Asisten Lapangan / Runner',
-          phone: '082111223366',
-          email: 'dewi@mahligaiwo.com',
-          notes: 'Koordinasi katering, meja prasmanan kerucut & blower/kipas angin.'
+          role: 'Asisten',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-rozy',
           name: 'Pak Rozy',
-          role: 'Master of Ceremony (MC)',
-          phone: '081298765432',
-          email: 'rozy@mahligaiwo.com',
-          notes: 'MC resepsi jam 13.00 WIB.'
+          role: 'MC',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-cloudy',
           name: 'Om Cloudy',
-          role: 'Videografer & Dokumentasi Shot',
-          phone: '081345678901',
-          email: 'cloudy@mahligaiwo.com',
-          notes: 'Dokumentasi video shot liputan.'
+          role: 'Fotografer',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-harvy',
           name: 'Harvy',
-          role: 'Perias / MUA, Henna & Nail Art',
-          phone: '085712345678',
-          email: 'harvy@mahligaiwo.com',
-          notes: 'MUA 3x ganti gaun, ronce melati, henna art.'
+          role: 'Perias',
+          phone: '',
+          email: '',
+          notes: ''
         }
       ]
     },
@@ -801,36 +801,28 @@ function getInitialEvents() {
       ],
       crew: [
         {
-          id: 'c-r1',
-          name: 'Sarah Maharani',
-          role: 'Admin WO & Koordinator',
-          phone: '081234567890',
-          email: 'sarah@mahligaiwo.com',
-          notes: 'Leader & Koordinator Rundown Acara.'
-        },
-        {
           id: 'c-r2',
           name: 'Pak Rozy',
-          role: 'Master of Ceremony (MC)',
-          phone: '081298765432',
-          email: 'rozy@mahligaiwo.com',
-          notes: 'MC Akad & Resepsi Malam.'
+          role: 'MC',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-r3',
           name: 'Harvy',
-          role: 'Perias / MUA, Henna & Nail Art',
-          phone: '085712345678',
-          email: 'harvy@mahligaiwo.com',
-          notes: 'MUA Akad & Resepsi.'
+          role: 'Perias',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-r4',
           name: 'Om Cloudy',
-          role: 'Videografer & Dokumentasi Shot',
-          phone: '081345678901',
-          email: 'cloudy@mahligaiwo.com',
-          notes: 'Lead Videografer Cinematic.'
+          role: 'Fotografer',
+          phone: '',
+          email: '',
+          notes: ''
         }
       ]
     },
@@ -867,28 +859,20 @@ function getInitialEvents() {
       ],
       crew: [
         {
-          id: 'c-d1',
-          name: 'Sarah Maharani',
-          role: 'Admin WO & Koordinator',
-          phone: '081234567890',
-          email: 'sarah@mahligaiwo.com',
-          notes: 'Koordinator lapangan.'
-        },
-        {
           id: 'c-d2',
           name: 'Harvy',
-          role: 'Perias / MUA, Henna & Nail Art',
-          phone: '085712345678',
-          email: 'harvy@mahligaiwo.com',
-          notes: 'MUA akad nikah.'
+          role: 'Perias',
+          phone: '',
+          email: '',
+          notes: ''
         },
         {
           id: 'c-d3',
           name: 'Pak Rozy',
-          role: 'Master of Ceremony (MC)',
-          phone: '081298765432',
-          email: 'rozy@mahligaiwo.com',
-          notes: 'MC akad nikah.'
+          role: 'MC',
+          phone: '',
+          email: '',
+          notes: ''
         }
       ]
     }
@@ -1044,7 +1028,7 @@ class WeddingApp {
     if (c.role === 'Perias / MUA, Henna & Nail Art' || c.role === 'Perias / MUA & Hairdo') c.role = 'Perias';
     if (c.role === 'Master of Ceremony (MC)' || c.role === 'MC (Master of Ceremony)') c.role = 'MC';
     if (c.role === 'Supir Logistik (Gaun & Makeup)' || c.role === 'Supir Logistik (Hantaran & Sound)') c.role = 'Sopir Logistik';
-    if (c.role === 'Fotografer & Video') c.role = 'Fotografer';
+    if (c.role === 'Fotografer & Video' || c.role === 'Videografer & Dokumentasi Shot') c.role = 'Fotografer';
   }
 
   loadMasterCrew() {
@@ -1097,6 +1081,7 @@ class WeddingApp {
               });
             }
           });
+          this.saveEvents();
         }
       } else {
         this.events = getInitialEvents();
@@ -4673,7 +4658,7 @@ function bootMahligaiApp() {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=21.7', { scope: './' })
+    navigator.serviceWorker.register('./sw.js?v=21.8', { scope: './' })
       .then((reg) => {
         reg.update();
         console.log('Mahligai WO PWA Service Worker aktif: ', reg.scope);

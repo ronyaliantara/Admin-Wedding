@@ -1,56 +1,40 @@
-# Panduan Publikasi GitHub Pages & Instalasi PWA Offline (`v21.5`)
+# Panduan Online & Pasang di HP — Harvy Wedding Organizer
 
-Aplikasi **Mahligai Wedding Organizer (`v21.5`)** telah dihubungkan ke repository GitHub Anda:
-- **Repository GitHub**: `https://github.com/ronyaliantara/Admin-Wedding.git`
-- **URL Aplikasi GitHub Pages**: `https://ronyaliantara.github.io/Admin-Wedding/`
+Link aplikasi: **https://ronyaliantara.github.io/Admin-Wedding/**
 
----
-
-## 1. Cara Mengaktifkan Link GitHub Pages (Satu Kali Saja)
-
-Setelah kode berhasil di-*push* ke repository `ronyaliantara/Admin-Wedding`:
-1. Buka halaman pengaturan GitHub Pages repository Anda:
-   👉 **[https://github.com/ronyaliantara/Admin-Wedding/settings/pages](https://github.com/ronyaliantara/Admin-Wedding/settings/pages)**
-2. Pada bagian **Build and deployment → Source**:
-   - Pilih **Deploy from a branch**, lalu pada bagian **Branch** pilih **`main`** dan folder **`/ (root)`**, kemudian klik **Save** *(atau pilih **GitHub Actions** untuk menggunakan workflow otomatis `.github/workflows/deploy-pages.yml`)*.
-3. Tunggu sekitar **1 menit**, lalu segarkan halaman. Aplikasi Anda akan langsung online secara permanen di:
-   👉 **[https://ronyaliantara.github.io/Admin-Wedding/](https://ronyaliantara.github.io/Admin-Wedding/)**
-
----
-
-## 2. Cara Update Aplikasi ke GitHub di Kemudian Hari
-
-Jika suatu saat ada perubahan kode di folder `d:\Wedding\Wedding`, cukup jalankan perintah berikut di terminal:
+## 1. Update aplikasi ke GitHub
+Setiap ada perubahan di folder `D:\Wedding\Wedding`, jalankan di terminal:
 
 ```powershell
-cd d:\Wedding\Wedding
+cd D:\Wedding\Wedding
 git add .
-git commit -m "Update aplikasi Mahligai WO"
+git commit -m "Update aplikasi Harvy WO"
 git push origin main
 ```
 
----
+GitHub Pages akan memperbarui link dalam ±1 menit. Jika mengubah file, naikkan juga nomor versi di `sw.js` (`harvy-wo-v22` → `v23`) dan di `index.html` (`?v=22`) supaya HP mengambil versi baru.
 
-## 3. Cara Pasang Aplikasi (PWA Offline) di HP & Laptop
+## 2. Pasang sebagai aplikasi (sekali saja per perangkat)
+Buka **https://ronyaliantara.github.io/Admin-Wedding/** saat ada internet, lalu:
+- **Android (Chrome)**: ketuk tombol **Pasang** di kartu atas Dashboard (atau menu ⋮ → **Instal aplikasi**).
+- **iPhone / iPad (Safari)**: tombol **Bagikan** → **Tambah ke Layar Utama**.
+- **Laptop (Chrome / Edge)**: tombol **Pasang** di Dashboard, atau ikon **Instal** di kolom alamat.
 
-Setelah link **`https://ronyaliantara.github.io/Admin-Wedding/`** aktif:
+Setelah terpasang, ikon **Harvy WO** ada di layar utama / menu Start, terbuka seperti aplikasi biasa (tanpa kolom alamat), dan **tetap jalan tanpa internet**. Tekan lama ikonnya untuk pintasan *Acara baru*, *Daftar acara*, *Arsip*.
 
-### A. Android (Google Chrome)
-1. Buka **`https://ronyaliantara.github.io/Admin-Wedding/`** di **Google Chrome**.
-2. Ketuk tombol **"📲 Pasang Aplikasi"** di pojok kanan atas aplikasi (atau menu titik tiga Chrome `⋮` → **"Pasang aplikasi"** / **"Tambahkan ke Layar Utama"**).
-3. Aplikasi **Mahligai WO** akan tampil di layar utama HP seperti aplikasi native dan siap digunakan **100% offline**.
+Saat ada pembaruan, aplikasi menampilkan **"Versi baru tersedia → Muat ulang"**. Data tidak hilang karena tersimpan di perangkat. Versi aplikasi terlihat di **Pengaturan → Usaha**.
+## 3. Kirim ke grup WhatsApp
+Buka acara → bagian **Pesan untuk grup WA**:
+- Di HP: **Kirim / Bagikan** → pilih WhatsApp → pilih grup.
+- Di laptop: **Salin teks** → tempel di WhatsApp Web / Desktop.
 
-### B. iPhone / iPad (Safari)
-1. Buka **`https://ronyaliantara.github.io/Admin-Wedding/`** menggunakan browser **Safari**.
-2. Ketuk tombol **Bagikan / Share** (ikon kotak dengan panah ke atas `⎋`) di bagian bawah layar.
-3. Pilih **"Tambah ke Layar Utama" (Add to Home Screen)** ➕, lalu ketuk **Tambah**.
+## 4. Backup & pindah data antar perangkat
+Data tersimpan di masing-masing perangkat. Untuk berjaga-jaga atau memindahkan:
+1. **Pengaturan → Data & Backup → Download backup** (file `Backup Harvy Wedding <tanggal jam>.json`).
+2. Kirim file itu ke perangkat lain (misalnya lewat WhatsApp).
+3. Di perangkat tujuan: **Pulihkan dari backup** → pilih **Gabungkan** (tambah yang belum ada) atau **Ganti semua** (pindah HP / laptop).
 
----
-
-## 4. Cara Sinkronisasi Data Acara Antara Laptop & HP (`.json`)
-
-- **Penyimpanan Lokal Aman**: Seluruh jadwal acara pernikahan, kru, admin, dan kustomisasi paket tersimpan di memori perangkat (`localStorage`).
-- **Pindahkan Data Laptop ⇄ HP**:
-  1. Buka **Pengaturan Admin (⚙️) → Tab Cadangkan Acara**.
-  2. Klik **Cadangkan Data Acara (`.json`)** untuk mengunduh file cadangan jadwal acara.
-  3. Kirim file `.json` tersebut via WhatsApp ke perangkat lain, lalu pilih **Pulihkan Data Acara (`.json`)**.
+## 5. Excel
+- **Export ke Excel (.xlsx)**: sheet *Info, Acara, Tim, Paket, Perlengkapan* — rapi, bisa difilter, siap dicetak.
+- Data bisa diedit di Excel / Google Sheets lalu **Import dari Excel** lagi. Jangan ubah judul kolom & kolom *ID*; baris baru cukup dikosongkan ID-nya. Di kolom isi (Gaun, Dekor, Tim, …) satu item per baris (Alt+Enter di Excel).
+- File **Database_Harvy_Wedding.xlsx** asli juga bisa di-import untuk memperbarui paket & perlengkapan.

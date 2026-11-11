@@ -1,7 +1,7 @@
 @echo off
-title Mahligai Wedding Organizer Launcher
+title Harvy Wedding Organizer
 echo ===================================================
-echo     MEMBUKA MAHLIGAI WEDDING ORGANIZER
+echo     MEMBUKA HARVY WEDDING ORGANIZER
 echo ===================================================
 echo.
 cd /d "%~dp0"

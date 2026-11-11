@@ -1,82 +1,61 @@
-const CACHE_NAME = 'mahligai-wo-pwa-v21.8';
-const ASSETS_TO_CACHE = [
+// Service worker Harvy Wedding Organizer — membuat aplikasi tetap jalan tanpa internet.
+// Naikkan nomor versi setiap kali ada update agar HP mengambil file terbaru.
+const CACHE_NAME = 'harvy-wo-v58';
+const ASSETS = [
   './',
   './index.html',
-  './css/style.css',
-  './js/app.js',
+  './css/style.css?v=58',
+  './js/data.js?v=58',
+  './js/excel.js?v=58',
+  './js/pdf.js?v=58',
+  './js/app.js?v=58',
   './manifest.json',
-  './icons/favicon.svg',
+  './icons/logo.jpg',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './Database_Harvy_Wedding.xlsx'
+  './icons/icon-maskable-192.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png'
 ];
 
-// Install: Pre-cache all core Static Web App & Offline PWA assets
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   self.skipWaiting();
+  event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
+});
+
+// Hapus cache versi lama (termasuk cache Mahligai WO)
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
-// Activate: Clean up all older cache versions immediately and claim clients
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
+const fromCache = req => caches.match(req).then(hit => hit ||
+  caches.match(req, { ignoreSearch: true }).then(loose => loose ||
+    (req.mode === 'navigate' ? caches.match('./index.html') : undefined)));
 
-// Support manual skipWaiting message from client
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-// Fetch: Network-First with full Offline Cache Fallback (ignores ?v= query strings when matching offline cache)
-self.addEventListener('fetch', (event) => {
+// Ambil dari internet (versi terbaru), tapi kalau sinyal lemah lebih dari 3 detik pakai simpanan di HP.
+self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (!url.protocol.startsWith('http')) return;
+  const isFont = /fonts\.(googleapis|gstatic)\.com$/.test(url.host);
+  if (url.origin !== self.location.origin && !isFont) return;
 
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          (networkResponse.type === 'basic' || networkResponse.type === 'cors')
-        ) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        // 1. Try exact match first, then ignoreSearch match (so style.css?v=21.5 matches ./css/style.css offline)
-        return caches.match(event.request).then((exactMatch) => {
-          if (exactMatch) return exactMatch;
-          return caches.match(event.request, { ignoreSearch: true }).then((looseMatch) => {
-            if (looseMatch) return looseMatch;
-            // 2. Fallback to index.html for navigation requests in offline standalone PWA mode
-            const acceptHeader = event.request.headers ? event.request.headers.get('accept') : '';
-            if (event.request.mode === 'navigate' || (acceptHeader && acceptHeader.includes('text/html'))) {
-              return caches.match('./index.html');
-            }
-          });
-        });
-      })
-  );
+  const network = fetch(event.request).then(res => {
+    if (res && (res.status === 200 || res.type === 'opaque')) {
+      const copy = res.clone();
+      caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
+    }
+    return res;
+  });
+  event.respondWith(new Promise(resolve => {
+    let done = false;
+    const finish = r => { if (!done && r) { done = true; resolve(r); } };
+    const timer = setTimeout(() => fromCache(event.request).then(finish), 3000);
+    network.then(r => { clearTimeout(timer); finish(r); })
+      .catch(() => { clearTimeout(timer); fromCache(event.request).then(r => finish(r || Response.error())); });
+  }));
+  event.waitUntil(network.catch(() => {}));
 });

@@ -1,4695 +1,1358 @@
-/**
- * MAHLIGAI WEDDING ORGANIZER - CORE APPLICATION LOGIC (v19)
- * Sistem Manajemen Acara & Koordinasi Tim Lapangan
- */
-
-// Purge any stale caches immediately on boot
-(async function purgeOldCachesOnBoot() {
-  if (typeof caches === 'undefined') return;
-  try {
-    const keys = await caches.keys();
-    for (const key of keys) {
-      if (key !== 'mahligai-wo-pwa-v21.5') {
-        await caches.delete(key);
-      }
-    }
-  } catch (e) {}
-})();
-
-// Backward safety dummy
-// ==================== HARVY WEDDING CATALOG & OPERATIONAL DATA (OFFICIAL EXCEL) ====================
-const HARVY_PACKAGES = [
-  {
-    "id": "pkg-sekitar-sakura",
-    "area": "Area Sekitar",
-    "name": "Sakura",
-    "price": 10000000,
-    "desc": "Dekor, MC, dan dokumentasi liputan.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nTumbang",
-    "effects": "MC",
-    "docs": "Foto 2 roll\nVideo (1x acara akad & resepsi) Liputan\nFile dalam flashdisk",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-anggrek",
-    "area": "Area Sekitar",
-    "name": "Anggrek",
-    "price": 12500000,
-    "desc": "Lebih lengkap, dengan video sinematik.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nTumbang",
-    "effects": "Hena\nMC",
-    "docs": "Foto 3 roll\nVideo (1x acara akad & resepsi) Cinematic\nFile dalam flashdisk",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-aglonema",
-    "area": "Area Sekitar",
-    "name": "Aglonema",
-    "price": 20000000,
-    "desc": "Lengkap dengan terop, kursi, dan sound system.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nTumbang\nWelcome sign in",
-    "effects": "Hena + nail art\nMC",
-    "docs": "Foto 3 roll\nVideo (1x acara akad & resepsi) Cinematic\nFile dalam flashdisk",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "",
-    "equipment": "Terop VVIP 1 plong\nTerop semi 3 plong\nKursi + cover 200\nKipas 3\nKerucut + 2 meja\nSound system",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-caladium",
-    "area": "Area Sekitar",
-    "name": "Caladium",
-    "price": 36000000,
-    "desc": "Paket paling lengkap, foto unlimited.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nTumbang\nWelcome sign in\nLengkungan 2\nPanggung kaca\nDekor lorong\nFree meja kursi akad",
-    "effects": "Dry smoke (beam 2, parled, dry ice, kembang api 4)\nBuket asli\nElectone tunggal + 2 penyanyi\nHena + nail art\nMC",
-    "docs": "Foto Unlimited\nVideo (1x acara akad & resepsi) Cinematic\nFile dalam flashdisk",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "",
-    "equipment": "Terop VVIP 6 plong (4x6)\nKursi + cover 250\nKipas 3\nKerucut + 2 meja\nBlower 1\nFull karpet\nSound system",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-akad-1",
-    "area": "Area Sekitar",
-    "name": "Paket Akad - Pilihan 1",
-    "price": 6000000,
-    "desc": "Rias, kebaya akad + jas, hena, dan dokumentasi foto.",
-    "decor": "",
-    "effects": "Hena",
-    "docs": "Foto 2 roll + album",
-    "makeup": "Rias make up by owner\nKebaya akad + jas\nHena",
-    "flowers": "Melati asli",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-akad-2",
-    "area": "Area Sekitar",
-    "name": "Paket Akad - Pilihan 2",
-    "price": 7500000,
-    "desc": "Rias, kebaya akad + jas, hena, dan dokumentasi foto + backdrop.",
-    "decor": "Backdrop akad modern",
-    "effects": "Hena",
-    "docs": "Foto 2 roll + album",
-    "makeup": "Rias make up by owner\nKebaya akad + jas\nHena",
-    "flowers": "Melati asli\nBuket asli",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-rias-saja",
-    "area": "Area Sekitar",
-    "name": "Rias Saja (Area Sekitar)",
-    "price": 6000000,
-    "desc": "Untuk yang hanya membutuhkan rias pengantin.",
-    "decor": "",
-    "effects": "Hena",
-    "docs": "",
-    "makeup": "1 gown baru (free gown akad)\nMelati\nHena",
-    "flowers": "Melati",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-makeup-resepsi",
-    "area": "Area Sekitar",
-    "name": "Make Up Resepsi (Area Sekitar)",
-    "price": 7000000,
-    "desc": "Rias pengantin lengkap untuk acara resepsi.",
-    "decor": "",
-    "effects": "",
-    "docs": "",
-    "makeup": "Gaun 2 gaun (gratis gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "Melati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-sekitar-prewed",
-    "area": "Area Sekitar",
-    "name": "Prewedding",
-    "price": 5000000,
-    "desc": "Sesi foto outdoor dengan 2 tema.",
-    "decor": "",
-    "effects": "",
-    "docs": "Foto outdoor\nFoto 20R (2x) + frame (pigura)\nSemua file dalam flashdisk",
-    "makeup": "Rias & Gown pengantin",
-    "flowers": "",
-    "equipment": "",
-    "extraCost": "",
-    "notes": "Foto bisa 2 tema (formal & casual), baju sendiri. Lokasi photoshoot di area sekitar. Transportasi & makan ditanggung client."
-  },
-  {
-    "id": "pkg-gresik-wijaya-kusuma",
-    "area": "Area Gresik",
-    "name": "Wijaya Kusuma",
-    "price": 10500000,
-    "desc": "Dekor, MC, dan rias pengantin lengkap.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nTumbang",
-    "effects": "MC",
-    "docs": "Foto 3 roll",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "Melati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-gresik-sanseviera",
-    "area": "Area Gresik",
-    "name": "Sanseviera",
-    "price": 12500000,
-    "desc": "Lebih lengkap, dengan buket asli dan hena.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nWelcome sign in\nTumbang",
-    "effects": "MC\nHena & nail art",
-    "docs": "Foto 3 roll",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "Buket asli\nMelati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-gresik-rias-saja",
-    "area": "Area Gresik",
-    "name": "Rias Saja (Area Gresik)",
-    "price": 6500000,
-    "desc": "Untuk yang hanya membutuhkan rias pengantin.",
-    "decor": "",
-    "effects": "Hena",
-    "docs": "",
-    "makeup": "1 gown baru (free gown akad)\nMelati\nHena",
-    "flowers": "Melati",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-gresik-makeup-resepsi",
-    "area": "Area Gresik",
-    "name": "Make Up Resepsi (Area Gresik)",
-    "price": 7000000,
-    "desc": "Rias pengantin lengkap untuk acara resepsi.",
-    "decor": "",
-    "effects": "",
-    "docs": "",
-    "makeup": "Gaun 2 gaun (gratis gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "Melati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-lamongan-monstera",
-    "area": "Area Lamongan",
-    "name": "Monstera",
-    "price": 10500000,
-    "desc": "Dekor, MC, dan rias pengantin lengkap.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nTumbang",
-    "effects": "MC",
-    "docs": "Foto 3 roll",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "Melati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-lamongan-seropegia",
-    "area": "Area Lamongan",
-    "name": "Seropegia",
-    "price": 12500000,
-    "desc": "Lebih lengkap, dengan buket asli dan hena.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nWelcome sign in\nTumbang",
-    "effects": "MC\nHena & nail art",
-    "docs": "Foto 3 roll",
-    "makeup": "Gaun 3 gaun (bonus gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "Buket asli\nMelati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-lamongan-rias-saja",
-    "area": "Area Lamongan",
-    "name": "Rias Saja (Area Lamongan)",
-    "price": 6500000,
-    "desc": "Untuk yang hanya membutuhkan rias pengantin.",
-    "decor": "",
-    "effects": "Hena",
-    "docs": "",
-    "makeup": "1 gown baru (free gown akad)\nMelati\nHena",
-    "flowers": "Melati",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-lamongan-makeup-resepsi",
-    "area": "Area Lamongan",
-    "name": "Make Up Resepsi (Area Lamongan)",
-    "price": 7000000,
-    "desc": "Rias pengantin lengkap untuk acara resepsi.",
-    "decor": "",
-    "effects": "",
-    "docs": "",
-    "makeup": "Gaun 2 gaun (gratis gaun akad)\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan\nMelati asli, bukan adat",
-    "flowers": "Melati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-luar-rias-10",
-    "area": "Area Luar Kota",
-    "name": "Rias 10 Juta",
-    "price": 10000000,
-    "desc": "Khusus rias pengantin, lengkap dengan buket asli.",
-    "decor": "",
-    "effects": "",
-    "docs": "",
-    "makeup": "Rias manten + 2 gown\nBonus gaun akad\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan",
-    "flowers": "Buket asli\nMelati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-luar-rias-12",
-    "area": "Area Luar Kota",
-    "name": "Rias 12 Juta",
-    "price": 12000000,
-    "desc": "Rias lengkap plus MC dan dokumentasi foto.",
-    "decor": "",
-    "effects": "MC",
-    "docs": "Foto 3 roll",
-    "makeup": "Rias manten + 2 gown\nBonus gaun akad\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan",
-    "flowers": "Buket asli\nMelati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  },
-  {
-    "id": "pkg-luar-rias-17",
-    "area": "Area Luar Kota",
-    "name": "Rias 17 Juta",
-    "price": 17000000,
-    "desc": "Rias lengkap plus dekor pintu masuk dan tumbang.",
-    "decor": "Ukuran 4 – 8 meter\nPintu masuk\nTumbang",
-    "effects": "MC",
-    "docs": "Foto 3 roll",
-    "makeup": "Rias manten + 2 gown\nBonus gaun akad\nRias terima tamu 4 orang\nRias domas Putra 2 & putri 2\nRias penggapit 2\nRias orang tua & besan",
-    "flowers": "Buket asli\nMelati asli, bukan adat",
-    "equipment": "",
-    "extraCost": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
-    "notes": "Transportasi menyesuaikan lokasi"
-  }
-];
-
-const HARVY_RENTALS = [
-  {
-    "id": "rent-vip-46",
-    "category": "Sewa 4 x 6",
-    "name": "Terop 4x6 VIP",
-    "price": 750000,
-    "unit": "plong"
-  },
-  {
-    "id": "rent-vvip-46",
-    "category": "Sewa 4 x 6",
-    "name": "Terop 4x6 VVIP",
-    "price": 1200000,
-    "unit": "plong"
-  },
-  {
-    "id": "rent-lorong-46",
-    "category": "Sewa 4 x 6",
-    "name": "Terop 4x6 Lorong",
-    "price": 1200000,
-    "unit": "plong"
-  },
-  {
-    "id": "rent-semi-46",
-    "category": "Sewa 4 x 6",
-    "name": "Terop 4x6 Semi",
-    "price": 550000,
-    "unit": "plong"
-  },
-  {
-    "id": "rent-biasa-46",
-    "category": "Sewa 4 x 6",
-    "name": "Terop 4x6 Biasa",
-    "price": 350000,
-    "unit": "plong"
-  },
-  {
-    "id": "rent-kerucut-meja",
-    "category": "Sewa Perlengkapan",
-    "name": "Kerucut + 2 Meja",
-    "price": 400000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-kursi-cover",
-    "category": "Sewa Perlengkapan",
-    "name": "Kursi + Cover",
-    "price": 4000,
-    "unit": "kursi"
-  },
-  {
-    "id": "rent-meja-tamu",
-    "category": "Sewa Perlengkapan",
-    "name": "Meja Tamu (60x130, t=70cm)",
-    "price": 75000,
-    "unit": "unit"
-  },
-  {
-    "id": "rent-kipas",
-    "category": "Sewa Perlengkapan",
-    "name": "Kipas Angin",
-    "price": 125000,
-    "unit": "unit"
-  },
-  {
-    "id": "rent-blower",
-    "category": "Sewa Perlengkapan",
-    "name": "Blower Kabut",
-    "price": 400000,
-    "unit": "unit"
-  },
-  {
-    "id": "rent-karpet",
-    "category": "Sewa Perlengkapan",
-    "name": "Karpet Jalan",
-    "price": 15000,
-    "unit": "meter"
-  },
-  {
-    "id": "rent-cover-dinding",
-    "category": "Sewa Perlengkapan",
-    "name": "Cover Dinding",
-    "price": 75000,
-    "unit": "bidang"
-  },
-  {
-    "id": "rent-sound",
-    "category": "Sewa Perlengkapan",
-    "name": "Sound System (2 hari 1 malam)",
-    "price": 2500000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-vvip-66",
-    "category": "Sewa 6 x 6",
-    "name": "Terop 6x6 VVIP",
-    "price": 1500000,
-    "unit": "plong"
-  },
-  {
-    "id": "rent-lorong-66",
-    "category": "Sewa 6 x 6",
-    "name": "Terop 6x6 Lorong",
-    "price": 1500000,
-    "unit": "plong"
-  },
-  {
-    "id": "rent-dekor-lorong",
-    "category": "Paket Tambahan",
-    "name": "Dekor Lorong",
-    "price": 1500000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-pregolan",
-    "category": "Paket Tambahan",
-    "name": "Pregolan",
-    "price": 800000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-lorong-bungah",
-    "category": "Paket Tambahan",
-    "name": "Lorong Bungah",
-    "price": 1800000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-panggung-kaca",
-    "category": "Paket Tambahan",
-    "name": "Panggung Kaca",
-    "price": 1200000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-welcome-sign",
-    "category": "Paket Tambahan",
-    "name": "Welcome Sign In Kaca",
-    "price": 200000,
-    "unit": "unit"
-  },
-  {
-    "id": "rent-lengkungan",
-    "category": "Paket Tambahan",
-    "name": "Lengkungan Bunga",
-    "price": 200000,
-    "unit": "buah"
-  },
-  {
-    "id": "rent-vas-bunga",
-    "category": "Paket Tambahan",
-    "name": "Vas Bunga Standing",
-    "price": 100000,
-    "unit": "buah"
-  },
-  {
-    "id": "rent-meja-akad",
-    "category": "Paket Tambahan",
-    "name": "Meja Kursi Akad",
-    "price": 500000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-jagrak-foto",
-    "category": "Paket Tambahan",
-    "name": "Jagrak Foto",
-    "price": 100000,
-    "unit": "buah"
-  },
-  {
-    "id": "rent-dry-smoke",
-    "category": "Paket Tambahan",
-    "name": "Dry Smoke (Beam 2, Parled, Dry Ice, Kembang Api 4)",
-    "price": 2000000,
-    "unit": "set"
-  },
-  {
-    "id": "rent-cucuk-lampa",
-    "category": "Paket Tambahan",
-    "name": "Cucuk Lampa (Anoman / Gatot Kaca)",
-    "price": 1000000,
-    "unit": "sesi"
-  }
-];
-
-const HARVY_CATALOG = { packages: HARVY_PACKAGES, rentals: HARVY_RENTALS };
-
-// Storage Keys
-const STORAGE_KEY_EVENTS = 'mahligai_wedding_events_fresh_v2';
-const STORAGE_KEY_MASTER_CREW = 'mahligai_master_crew_v2';
-const STORAGE_KEY_ADMIN_LIST = 'mahligai_admin_list_v2';
-const STORAGE_KEY_BRAND_CONFIG = 'mahligai_brand_config_v2';
-
-// Default Brand Identity Configuration
-
-// ==================== LUXURY BRAND EMBLEMS & UI VECTOR ICONS ====================
-const BRAND_LOGO_SVGS = {
-  'svg-rings': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="14" r="5.5"/><circle cx="15" cy="14" r="5.5"/><path d="M9 4.5L11 7l-2 1.5L7 7z" fill="currentColor" stroke="none"/><path d="M6.5 4.5h5"/></svg>`,
-  'svg-crown': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18M4 15l-1-9 5.5 4L12 4l3.5 6L21 6l-1 9H4z"/><circle cx="12" cy="3" r="1" fill="currentColor"/><circle cx="3" cy="5" r="1" fill="currentColor"/><circle cx="21" cy="5" r="1" fill="currentColor"/></svg>`,
-  'svg-monogram': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 16V8l4 5 4-5v8"/></svg>`,
-  'svg-floral': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-1.5 2.5-2 5.5 0 8 2-2.5 1.5-5.5 0-8z"/><path d="M12 13c-3-1.5-6-1-7.5 1.5 2.5 1.5 5.5 1 7.5-1.5z"/><path d="M12 13c3-1.5 6-1 7.5 1.5-2.5 1.5-5.5 1-7.5-1.5z"/><path d="M7 8c1 2.5 3 4 5 5-2-1-4-2.5-5-5z"/><path d="M17 8c-1 2.5-3 4-5 5 2-1 4-2.5 5-5z"/><path d="M8 18h8"/></svg>`,
-  'svg-heart': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5l-1.35-1.23C5.8 14.88 2.5 11.9 2.5 8.25 2.5 5.28 4.83 3 7.75 3c1.66 0 3.25.77 4.25 2 1-1.23 2.59-2 4.25-2 2.92 0 5.25 2.28 5.25 5.25 0 3.65-3.3 6.63-8.15 11.03L12 20.5z"/></svg>`,
-  'svg-dove': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>`,
-  'svg-sparkle': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3z"/><path d="M5 3v4M3 5h4M19 17v4M17 19h4"/></svg>`,
-  'svg-castle': `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-5a3 3 0 0 1 6 0v5"/><path d="M9 9h6"/></svg>`
+"use strict";
+const SEED = window.HARVY_SEED;
+const LOGO_DEFAULT = "icons/logo.jpg";
+const APP_VERSION = "58";
+const KEY = "harvy_wo_db_v1";
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const clone = x => JSON.parse(JSON.stringify(x));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ic = (n, cls = "") => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
+const num = v => { const n = parseInt(String(v ?? "").replace(/[^\d-]/g, ""), 10); return isNaN(n) ? 0 : n; };
+const rp = n => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
+const rpShort = n => { n = Number(n) || 0; if (Math.abs(n) >= 1e9) return "Rp " + (n / 1e9).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " M"; if (Math.abs(n) >= 1e6) return "Rp " + (n / 1e6).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " jt"; return rp(n); };
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayStr = () => ymd(new Date());
+/* tanggal yang sama bulan depan (mis. 11 Nov → 11 Des) */
+const sebulanLagi = () => { const n = new Date(); return ymd(new Date(n.getFullYear(), n.getMonth() + 1, n.getDate())); };
+const parseD = s => { if (!s) return null; const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const fmtD = (s, o = { weekday: "long", day: "numeric", month: "long", year: "numeric" }) => s ? parseD(s).toLocaleDateString("id-ID", o) : "Belum ada tanggal";
+const daysTo = s => s ? Math.round((parseD(s) - parseD(todayStr())) / 864e5) : null;
+const lines = t => String(t || "").split("\n").map(x => x.trim()).filter(Boolean);
+const ROLES = ["MUA", "Crew Rias", "Asisten", "Admin", "MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone", "Dekor", "Sopir", "Lainnya"];
+/* Daftar tim Harvy (bisa diubah di Pengaturan → Tim) */
+const ROSTER = {
+  "MUA": ["Harvy"],
+  "Crew Rias": ["Buk Um", "Sari", "Maya", "Nisaul", "Isti", "Rina", "Lany", "Marisna", "Lia", "Dewi", "Nadin", "Isa", "Kosna", "Tiya"],
+  "Asisten": ["Puput", "Nanda"],
+  "Admin": ["Yenny", "Efi", "Gita"],
+  "MC": ["Syafi'i", "Rozy", "Rully", "Shofi", "Supandi", "Andik", "Mudi", "Yazid", "Teguh", "Dimas", "Sukir", "Siti", "Sony", "Malik", "Adhim"],
+  "Foto": ["Harry Photografer", "Zubeth", "Aang Angkasa", "Panoramic", "Bey (JRA)", "Jeck Potret"],
+  "Video": ["Cloudy", "MD"],
+  "Dry Smoke": ["Bram"],
+  "Cucuk Lampah": ["Adjie Asmoro"],
+  "Electone": ["Thony"]
 };
-
-const UI_ICONS = {
-  calendar: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-  mapPin: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
-  clock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
-  users: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-  phone: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
-  mail: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
-  note: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
-  whatsapp: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>`,
-  edit: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
-  trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
-  externalMap: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>`,
-  couple: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
-  dress: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 4 4 1-3 4 2 9H7l2-9-3-4 4-1 2-4z"/></svg>`,
-  tent: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18L12 4 3 20z"/><path d="M12 4v16"/></svg>`,
-  star: `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  crown: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18M4 15l-1-9 5.5 4L12 4l3.5 6L21 6l-1 9H4z"/></svg>`
-};
-
-function resizeImageToDataUrl(file, maxWidth, maxHeight, callback) {
-  if (!file) return callback(new Error('No file'));
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      let w = img.width || maxWidth;
-      let h = img.height || maxHeight;
-      if (w > maxWidth || h > maxHeight) {
-        const ratio = Math.min(maxWidth / w, maxHeight / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
-      callback(null, canvas.toDataURL('image/png', 0.92));
-    };
-    img.onerror = (err) => callback(err);
-    img.src = e.target.result;
-  };
-  reader.onerror = (err) => callback(err);
-  reader.readAsDataURL(file);
+const NAMA_SAMA = { lani: "lany" }; // ejaan lain untuk orang yang sama
+const normNama = s => { const k = String(s || "").toLowerCase().replace(/\(.*?\)/g, "").trim().replace(/^(pak|bu|buk|bapak|ibu|om|mas|mbak|kak|cow\.?)\s+/, "").replace(/[^a-z0-9']/g, ""); return NAMA_SAMA[k] || k; };
+const rosterList = () => Object.entries(ROSTER).flatMap(([peran, names]) => names.map(nama => ({ id: uid(), nama, peran, hp: "", aktif: true })));
+/* Ubah isian lama MC/Foto/Shot/Hena (teks) menjadi anggota tim yang dipilih */
+function linkLegacy(d, o) {
+  o.crew = o.crew || [];
+  [["mc", "MC"], ["foto", "Foto"], ["shot", "Video"], ["hena", "Hena"]].forEach(([f, peran]) => {
+    const v = String(o[f] || "").trim(); o[f] = "";
+    if (!v || v === "-") return;
+    let m = d.tim.find(x => normNama(x.nama) === normNama(v));
+    if (!m) { m = { id: uid(), nama: v.replace(/\s*\(.*\)\s*$/, "").trim() || v, peran, hp: "", aktif: true }; d.tim.push(m); }
+    if (!o.crew.includes(m.id)) o.crew.push(m.id);
+    const ket = v.match(/\((.*?)\)/); if (ket) o.nb = [o.nb, `${peran}: ${ket[1]}`].filter(Boolean).join("\n");
+  });
 }
+const logoSrc = () => (db && db.settings.logo) || LOGO_DEFAULT;
 
-function getDefaultBrandConfig() {
+/* ---------- DATA ---------- */
+function defaultDB() {
+  const tim = rosterList();
   return {
-    fullName: 'Mahligai Wedding Organizer',
-    shortName: 'Mahligai WO',
-    tagline: 'Wedding Organizer Management',
-    logoType: 'svg',
-    logoValue: 'svg-rings',
-    logoUrl: '',
-    primaryColor: '#92400E',
-    whatsappSharePhone: '081234567890',
-    email: 'admin@mahligaiwo.com',
-    website: 'https://mahligaiwo.com'
+    v: 1,
+    settings: {
+      bizName: "Harvy Wedding", tagline: "Profesional Makeup & Wedding Planner",
+      alamat: "Jln. Raya Takerharjo RT 01 / RW 01, Solokuro, Lamongan",
+      hpOwner: "082141145500", hpAdmin: "085549034700", ig: "Harvy_wedding_luthfiyah_z", fb: "Luthfiyah harvy wedding III",
+      theme: "auto",
+      footer: "• *Buat semuanya jgn lupa absen kehadiran ya 😊😊*\n• *Buat crew, besok smpai lokasi jgn lupa  langsung cek perlengkapan ya kak  🙏🏻*\n• *Sebelum pulang jgn lupa cek perlengkapan lagi, biar tidak ada yg ketinggalan 🙏😊*",
+      waFormat: "briefing",
+      waShow: { tanggal: true, ig: true, tiktok: true, ortu: true, hp: true, alamat: true, maps: true, paket: false, admin: true }
+    },
+    wilayah: clone(SEED.wilayah), paket: clone(SEED.paket), addons: clone(SEED.addons), tim,
+    katalog: {
+      nb: ["Ada prosesi injak telur", "Ada prosesi sungkem", "Ada kirab", "Ada pesan & kesan dari bridesmaid", "Pengapit cowok 1 & cewek 1", "Ada jagrak foto", "Tanpa akad, langsung resepsi", "Tanpa acara malam", "Ada acara malam", "Seluruh kru standby 2 jam sebelum acara", "Bongkar malam"],
+      makeup: ["Manten siap dimake up jam … pagi", "Terima tamu dll siap dimake up jam … pagi", "Orang tua & besan dimake up jam … pagi", "Retouch make up resepsi jam …"],
+      gaun: ["Putih kebaya", "Navy jarik", "Navy new jarik", "Emerald green", "Ivory new", "Reza jarik sorot"],
+      pasangan: ["Blangkon", "Jas putih", "Jas ivory", "Jas emerald green", "Jas navy", "Beskap"],
+      hijab: ["Hijab solo", "Hijab modern", "Hijab simple", "Tanpa hijab"],
+      melati: ["Solo Putri", "Sunda Siger", "Biasa (bukan adat)"]
+    },
+    orders: [] // mulai kosong — data acara tersimpan di perangkat masing-masing
   };
 }
-
-// Default Admin List
-function getInitialAdminList() {
-  return [
-    {
-      id: 'adm-sarah',
-      name: 'Sarah Maharani',
-      phone: '081234567890',
-      email: 'sarah@mahligaiwo.com',
-      isPrimary: true
-    }
-  ];
+let db;
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); return migrate(d); } } catch (e) { console.warn(e); }
+  const d = defaultDB();
+  try { importOldApp(d); } catch (e) { console.warn("Import data lama gagal", e); }
+  d.orders.forEach(o => linkLegacy(d, o));
+  removeDemoPeople(d); mergeDupes(d);
+  d.settings.rosterV3 = true;
+  return d;
 }
-
-// Default Master Crew Database
-function getInitialMasterCrew() {
-  return [
-    {
-      id: 'mc-harvy',
-      name: 'Harvy',
-      role: 'Perias',
-      phone: '',
-      email: '',
-      notes: ''
-    },
-    {
-      id: 'mc-pak-rozy',
-      name: 'Pak Rozy',
-      role: 'MC',
-      phone: '',
-      email: '',
-      notes: ''
-    },
-    {
-      id: 'mc-om-cloudy',
-      name: 'Om Cloudy',
-      role: 'Fotografer',
-      phone: '',
-      email: '',
-      notes: ''
-    },
-    {
-      id: 'mc-lani',
-      name: 'Lani',
-      role: 'Asisten',
-      phone: '',
-      email: '',
-      notes: ''
-    },
-    {
-      id: 'mc-lia',
-      name: 'Lia',
-      role: 'Asisten',
-      phone: '',
-      email: '',
-      notes: ''
-    },
-    {
-      id: 'mc-dewi',
-      name: 'Dewi',
-      role: 'Asisten',
-      phone: '',
-      email: '',
-      notes: ''
-    },
-    {
-      id: 'mc-mas-rudi',
-      name: 'Mas Rudi',
-      role: 'Sopir Logistik',
-      phone: '',
-      email: '',
-      notes: ''
-    }
-  ];
+/* Pindahkan data dari versi lama (Mahligai WO) yang tersimpan di perangkat ini — hanya sekali */
+const OLD_ROLE = { "Asisten": "Asisten", "Perias": "MUA", "Fotografer": "Foto", "Videografer": "Video", "MC": "MC", "Sopir Logistik": "Sopir", "Admin WO & Koordinator": "Admin" };
+const OLD_DEMO = ["event-rifqi-nabila-2026", "event-dimas-anggi-2026"];
+const OLD_DEMO_PEOPLE = ["sarahmaharani", "rudi"]; // contoh bawaan aplikasi lama (Sarah Maharani, Mas Rudi) — bukan tim Harvy
+/* gabungkan anggota tim yang namanya sama (mis. "Cow. Rozy" & "Pak Rozy" = Rozy) */
+function mergeDupes(d) {
+  const keep = new Map(), alias = {};
+  const resmi = new Set(Object.values(ROSTER).flat()), urut = [...d.tim].sort((a, b) => resmi.has(b.nama) - resmi.has(a.nama)); // nama dari daftar resmi Harvy diutamakan
+  urut.forEach(x => { const k = normNama(x.nama); if (!k) return; if (keep.has(k)) { const m = keep.get(k); alias[x.id] = m.id; if (!m.hp && x.hp) m.hp = x.hp; } else keep.set(k, x); });
+  if (!Object.keys(alias).length) return;
+  d.tim = d.tim.filter(x => !alias[x.id]);
+  d.orders.forEach(o => { o.crew = [...new Set((o.crew || []).map(id => alias[id] || id))]; });
 }
-
-// 3 Realistic Initial Demo Events
-function getInitialEvents() {
-  return [
-    {
-      id: 'event-salbil-meli-2026',
-      coupleName: 'Salbil & Meli',
-      date: '2026-11-07',
-      clientPhone: '085606622517 / 082196557216',
-      clientIg: '@un.melindah (mel)',
-      fatherName: 'Abd. Kholiq',
-      motherName: 'Ida Khuriyah',
-      status: 'confirmed',
-      vendorMc: 'Pak Rozy',
-      vendorPhoto: '-',
-      vendorVideo: 'Om Cloudy',
-      vendorHenna: 'Harvy',
-      makeupNotes: '- Manten siap dimake up sktar jam 9/10 pagi.\n- Untuk terima tamu dll siap dimake up sktr jam 7/8 pagi.',
-      attireNotes: '1. Coklat jarik + Blangkon (7), (Hijab modern pakai melati)\n2. Maroon jarik + Bashofi, Sembongan, Tanpa kopyah, (Hijab modern)\n3. Ivory + Jas ivory / Jas mocca LL, (Hijab modern)\n• Melati : Biasa',
-      logisticsNotes: 'Untuk paket yg ikut dr harvy :\n• Ada dekor & welcome sign in kaca\n• Terop VVIP 1 plong\n• Terop semi 3 plong\n• Kursi 200 + bungkus\n• Kipas 4 unit\n• Kerucut + 2 meja\n• Blower 1 unit\n• Meja 3 unit',
-      specialNotes: 'Tanpa akad, langsung resepsi siang jam 1 (13.00 WIB). Seluruh kru hadir standby 2 jam sebelum acara.',
-      locations: [
-        {
-          id: 'loc-salbil-1',
-          locName: 'Lokasi 1',
-          eventName: 'Resepsi',
-          label: 'Resepsi',
-          name: 'Resepsi',
-          time: '13.00 WIB - Selesai',
-          startTime: '13:00',
-          endTime: 'Selesai',
-          venueName: 'Kediaman Mempelai Wanita',
-          venueType: 'Kediaman Mempelai Wanita',
-          venueAddress: 'Dsn. Dukuh, Desa Bungah RT 22B / RW 8, Bungah, Gresik',
-          customMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Dsn.+Dukuh,+Desa+Bungah+RT+22B+/+RW+8,+Bungah,+Gresik',
-          mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Dsn.+Dukuh,+Desa+Bungah+RT+22B+/+RW+8,+Bungah,+Gresik',
-          isAkad: false,
-          isReception: true,
-          notes: 'Tanpa Akad, Resepsi siang jam 1. Area parkir tamu di lapangan terdekat.'
-        }
-      ],
-      crew: [
-        {
-          id: 'c-lani',
-          name: 'Lani',
-          role: 'Asisten',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-lia',
-          name: 'Lia',
-          role: 'Asisten',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-dewi',
-          name: 'Dewi',
-          role: 'Asisten',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-rozy',
-          name: 'Pak Rozy',
-          role: 'MC',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-cloudy',
-          name: 'Om Cloudy',
-          role: 'Fotografer',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-harvy',
-          name: 'Harvy',
-          role: 'Perias',
-          phone: '',
-          email: '',
-          notes: ''
-        }
-      ]
-    },
-    {
-      id: 'event-rifqi-nabila-2026',
-      coupleName: 'Rifqi & Nabila',
-      date: '2026-11-15',
-      clientPhone: '081233445566',
-      clientIg: '@rifqinabila.story',
-      fatherName: 'Drs. H. Bambang Soediro',
-      motherName: 'Hj. Sri Wahyuni',
-      status: 'confirmed',
-      vendorMc: 'Pak Rozy',
-      vendorPhoto: 'Om Cloudy Photography',
-      vendorVideo: 'Cinematic Lens',
-      vendorHenna: 'Harvy',
-      makeupNotes: '- Standby makeup akad jam 05.30 pagi di hotel transit.\n- Retouch makeup resepsi jam 17.00 WIB.',
-      attireNotes: '1. Akad: Putih adat Jawa Solo (ronce melati tibo dodo)\n2. Resepsi: Velvet maroon keemasan modern + Jas beskap',
-      logisticsNotes: 'Dekorasi pelaminan 10 meter, karpet jalan merah, 6 unit standing flower, lighting moving beam.',
-      specialNotes: 'Acara akad nikah khidmat di Masjid Agung, dilanjutkan resepsi megah di ballroom.',
-      locations: [
-        {
-          id: 'loc-rifqi-1',
-          name: 'Akad Nikah',
-          startTime: '08:00',
-          endTime: '10:00',
-          venueType: 'Masjid Agung Gresik',
-          venueAddress: 'Jl. DR. Wahidin Sudirohusodo No.788, Kebomas, Gresik',
-          customMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Masjid+Agung+Gresik',
-          isAkad: true,
-          isReception: false,
-          notes: 'Akad nikah di ruang utama masjid, parkir luas di halaman barat.'
-        },
-        {
-          id: 'loc-rifqi-2',
-          name: 'Resepsi Malam',
-          startTime: '18:30',
-          endTime: '21:30',
-          venueType: 'Gedung Graha Sarana Gresik',
-          venueAddress: 'Jl. Ahmad Yani No. 1, Gresik',
-          customMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Gedung+Graha+Sarana+Gresik',
-          isAkad: false,
-          isReception: true,
-          notes: 'Resepsi ballroom dengan 500 undangan.'
-        }
-      ],
-      crew: [
-        {
-          id: 'c-r2',
-          name: 'Pak Rozy',
-          role: 'MC',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-r3',
-          name: 'Harvy',
-          role: 'Perias',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-r4',
-          name: 'Om Cloudy',
-          role: 'Fotografer',
-          phone: '',
-          email: '',
-          notes: ''
-        }
-      ]
-    },
-    {
-      id: 'event-dimas-anggi-2026',
-      coupleName: 'Dimas & Anggi',
-      date: '2026-11-20',
-      clientPhone: '081799881122',
-      clientIg: '@dimasanggi.wedding',
-      fatherName: 'H. Achmad Subari',
-      motherName: 'Hj. Siti Aminah',
-      status: 'confirmed',
-      vendorMc: 'Pak Rozy',
-      vendorPhoto: 'Om Cloudy',
-      vendorVideo: 'Om Cloudy',
-      vendorHenna: 'Harvy',
-      makeupNotes: '- Makeup akad di kediaman mempelai wanita jam 05.30 pagi.',
-      attireNotes: '1. Kebaya akad putih modern payet & Jas pria modern. Melati asli fresh.',
-      logisticsNotes: 'Backdrop akad modern aesthetic, karpet jalan putih, sound system 2 hari 1 malam.',
-      specialNotes: 'Akad nikah intim keluarga dilanjutkan tasyakuran.',
-      locations: [
-        {
-          id: 'loc-dimas-1',
-          name: 'Akad & Syukuran',
-          startTime: '08:00',
-          endTime: '11:30',
-          venueType: 'Kediaman Mempelai Wanita',
-          venueAddress: 'Jl. Raya Manyar No. 45, Manyar, Gresik',
-          customMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Jl.+Raya+Manyar+Gresik',
-          isAkad: true,
-          isReception: true,
-          notes: 'Akad nikah khidmat dilanjutkan ramah tamah keluarga.'
-        }
-      ],
-      crew: [
-        {
-          id: 'c-d2',
-          name: 'Harvy',
-          role: 'Perias',
-          phone: '',
-          email: '',
-          notes: ''
-        },
-        {
-          id: 'c-d3',
-          name: 'Pak Rozy',
-          role: 'MC',
-          phone: '',
-          email: '',
-          notes: ''
-        }
-      ]
-    }
-  ];
+function removeDemoPeople(d) {
+  const ids = d.tim.filter(x => OLD_DEMO_PEOPLE.includes(normNama(x.nama))).map(x => x.id);
+  if (!ids.length) return;
+  d.tim = d.tim.filter(x => !ids.includes(x.id));
+  d.orders.forEach(o => { o.crew = (o.crew || []).filter(id => !ids.includes(id)); });
 }
-
-
-class WeddingApp {
-  constructor() {
-    this.events = [];
-    this.masterCrew = [];
-    this.adminList = [];
-    this.brandConfig = null;
-    this.currentView = 'events';
-    this.currentEventId = null;
-    this.activeFilter = 'upcoming';
-    this.shareEmojiMode = false;
-    this.selectedMasterCrewIds = new Set();
-    this.activeExcelPreviewArea = 'Area Sekitar';
-
-    this.STORAGE_KEY_HARVY_PACKAGES = 'mahligai_harvy_packages_v2';
-    this.STORAGE_KEY_HARVY_RENTALS = 'mahligai_harvy_rentals_v2';
-    this.STORAGE_KEY_HARVY_SYNC_META = 'mahligai_harvy_sync_meta_v2';
-    this.harvyPackages = HARVY_PACKAGES;
-    this.harvyRentals = HARVY_RENTALS;
-
-    this.init();
-  }
-
-  init() {
-    this.loadBrandConfig();
-    this.loadMasterCrew();
-    this.loadAdminList();
-    this.loadEvents();
-    this.loadHarvyDatabase();
-    this.initElements();
-    this.bindEvents();
-    this.renderOperationalPackageDropdowns();
-    this.applyBrandSettings();
-    this.renderUserAccessHeader();
-    this.checkH3Notifications();
-    this.render();
-    this.initPwaInstall();
-  }
-
-  // ==================== STORAGE & PERSISTENCE ====================
-  loadBrandConfig() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_BRAND_CONFIG);
-      if (raw) {
-        this.brandConfig = JSON.parse(raw);
-      } else {
-        this.brandConfig = getDefaultBrandConfig();
-        this.saveBrandConfig(this.brandConfig);
-      }
-    } catch (e) {
-      this.brandConfig = getDefaultBrandConfig();
-    }
-  }
-
-  saveBrandConfig(cfg) {
-    this.brandConfig = cfg;
-    localStorage.setItem(STORAGE_KEY_BRAND_CONFIG, JSON.stringify(cfg));
-  }
-
-  loadAdminList() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_ADMIN_LIST);
-      if (raw) {
-        this.adminList = JSON.parse(raw);
-      } else {
-        this.adminList = getInitialAdminList();
-        this.saveAdminList();
-      }
-    } catch (e) {
-      this.adminList = getInitialAdminList();
-    }
-  }
-
-  saveAdminList() {
-    localStorage.setItem(STORAGE_KEY_ADMIN_LIST, JSON.stringify(this.adminList));
-    this.syncPrimaryAdminToMasterCrew();
-  }
-
-  getPrimaryAdmin() {
-    const p = this.adminList.find(a => a.isPrimary);
-    return p || this.adminList[0] || {
-      id: 'adm-fallback',
-      name: 'Sarah Maharani',
-      phone: '081234567890',
-      email: 'sarah@mahligaiwo.com'
-    };
-  }
-
-  syncPrimaryAdminToMasterCrew() {
-    const primaryAdmin = this.getPrimaryAdmin();
-    if (!primaryAdmin) return;
-    let crew = this.masterCrew.find(c => c.id === 'mc-admin' || c.role.includes('Admin WO'));
-    if (crew) {
-      crew.name = primaryAdmin.name;
-      crew.phone = primaryAdmin.phone;
-      crew.email = primaryAdmin.email;
-    } else {
-      this.masterCrew.unshift({
-        id: 'mc-admin',
-        name: primaryAdmin.name,
-        role: 'Admin WO & Koordinator',
-        phone: primaryAdmin.phone,
-        email: primaryAdmin.email,
-        notes: 'Koordinator briefing, jadwal standby kru, dan customer care Mahligai WO.'
-      });
-    }
-    this.saveMasterCrew();
-  }
-
-  sanitizeDummyCrewItem(c) {
-    if (!c) return;
-    const dummyPhones = new Set([
-      '085712345678', '081298765432', '081345678901',
-      '082111223344', '082111223355', '082111223366',
-      '081233445566', '081322119988'
-    ]);
-    const dummyNotes = new Set([
-      'Perias pengantin, henna art, nail art & ronce melati.',
-      'MC formal akad nikah dan santai resepsi.',
-      'Liputan video cinematic dan foto dokumentasi.',
-      'Pendamping pengantin putri dan asisten ganti gaun 1, 2, 3.',
-      'Koordinator penerima tamu, buku tamu dan souvenir.',
-      'Koordinasi prasmanan, kerucut meja tamu, blower & kipas.',
-      'Pengiriman gaun pengantin, kotak hantaran, dan perlengkapan.',
-      'Operator tata suara sound system, mic wireless, & dry smoke.',
-      'Pendamping ganti gaun 1, 2, 3 dan runner manten putri.',
-      'Standby penerima tamu dan souvenir.',
-      'Koordinasi katering, meja prasmanan kerucut & blower/kipas angin.',
-      'MC resepsi jam 13.00 WIB.',
-      'Dokumentasi video shot liputan.',
-      'MUA 3x ganti gaun, ronce melati, henna art.',
-      'MC Akad & Resepsi Malam.',
-      'MUA Akad & Resepsi.',
-      'Lead Videografer Cinematic.',
-      'MUA akad nikah.',
-      'MC akad nikah.'
-    ]);
-    const dummyEmails = new Set([
-      'harvy@mahligaiwo.com', 'rozy@mahligaiwo.com', 'cloudy@mahligaiwo.com',
-      'lani@mahligaiwo.com', 'lia@mahligaiwo.com', 'dewi@mahligaiwo.com',
-      'rudi@mahligaiwo.com', 'bima@mahligaiwo.com'
-    ]);
-    if (c.phone && dummyPhones.has(c.phone.trim())) c.phone = '';
-    if (c.notes && dummyNotes.has(c.notes.trim())) c.notes = '';
-    if (c.email && dummyEmails.has(c.email.trim())) c.email = '';
-    if (c.role === 'Asisten Lapangan / Runner') c.role = 'Asisten';
-    if (c.role === 'Perias / MUA, Henna & Nail Art' || c.role === 'Perias / MUA & Hairdo') c.role = 'Perias';
-    if (c.role === 'Master of Ceremony (MC)' || c.role === 'MC (Master of Ceremony)') c.role = 'MC';
-    if (c.role === 'Supir Logistik (Gaun & Makeup)' || c.role === 'Supir Logistik (Hantaran & Sound)') c.role = 'Sopir Logistik';
-    if (c.role === 'Fotografer & Video' || c.role === 'Videografer & Dokumentasi Shot') c.role = 'Fotografer';
-  }
-
-  loadMasterCrew() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_MASTER_CREW);
-      if (raw) {
-        this.masterCrew = JSON.parse(raw);
-        if (!Array.isArray(this.masterCrew) || this.masterCrew.length === 0) {
-          this.masterCrew = getInitialMasterCrew();
-        } else {
-          this.masterCrew.forEach(c => this.sanitizeDummyCrewItem(c));
-        }
-        this.saveMasterCrew();
-      } else {
-        this.masterCrew = getInitialMasterCrew();
-        this.saveMasterCrew();
-      }
-    } catch (e) {
-      this.masterCrew = getInitialMasterCrew();
-    }
-  }
-
-  saveMasterCrew() {
-    localStorage.setItem(STORAGE_KEY_MASTER_CREW, JSON.stringify(this.masterCrew));
-  }
-
-  loadEvents() {
-    try {
-      let raw = localStorage.getItem(STORAGE_KEY_EVENTS);
-      if (raw) {
-        // Sanitize corrupted unicode characters
-        raw = raw.replace(/[\uFFFD\uFEFF]/g, '');
-        this.events = JSON.parse(raw);
-        // Normalize locations for stored events
-        if (Array.isArray(this.events)) {
-          this.events.forEach(ev => {
-            if (ev.crew && Array.isArray(ev.crew)) {
-              ev.crew.forEach(c => this.sanitizeDummyCrewItem(c));
-            }
-            if (ev.locations && Array.isArray(ev.locations)) {
-              ev.locations.forEach((loc, idx) => {
-                if (!loc.locName) loc.locName = 'Lokasi ' + (idx + 1);
-                if (!loc.eventName) loc.eventName = loc.label || (loc.name && !loc.name.toLowerCase().startsWith('lokasi') ? loc.name : 'Resepsi');
-                if (ev.id === 'event-salbil-meli-2026' && idx === 0) {
-                  loc.locName = 'Lokasi 1';
-                  loc.eventName = 'Resepsi';
-                  loc.label = 'Resepsi';
-                  loc.name = 'Resepsi';
-                }
-              });
-            }
-          });
-          this.saveEvents();
-        }
-      } else {
-        this.events = getInitialEvents();
-        this.saveEvents();
-      }
-    } catch (e) {
-      this.events = getInitialEvents();
-    }
-  }
-
-  saveEvents() {
-    localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(this.events));
-  }
-
-  // ==================== DOM ELEMENTS INITIALIZATION ====================
-  initElements() {
-    // Navigation
-    this.brandHomeBtn = document.getElementById('brandHomeBtn');
-    this.navEventsBtn = document.getElementById('navEventsBtn');
-    this.navMasterCrewBtn = document.getElementById('navMasterCrewBtn');
-    this.navMasterCrewCount = document.getElementById('navMasterCrewCount');
-
-    // Views
-    this.viewListEvents = document.getElementById('viewListEvents');
-    this.viewMasterCrew = document.getElementById('viewMasterCrew');
-    this.viewDetailEvent = document.getElementById('viewDetailEvent');
-
-    // Metrics & Filter Tab Counts
-    this.metricUpcoming = document.getElementById('metricUpcoming');
-    this.metricH3Count = document.getElementById('metricH3Count');
-    this.metricClosestEvent = document.getElementById('metricClosestEvent');
-    this.metricActiveCrewCount = document.getElementById('metricActiveCrewCount');
-    this.metricMasterCrewTotal = document.getElementById('metricMasterCrewTotal');
-    this.countUpcoming = document.getElementById('countUpcoming');
-    this.countH3 = document.getElementById('countH3');
-    this.countArchived = document.getElementById('countArchived');
-    this.countAll = document.getElementById('countAll');
-
-    // Event Filters & Search
-    this.inputSearchEvents = document.getElementById('inputSearchEvents');
-    this.eventsGridContainer = document.getElementById('eventsGridContainer');
-    this.eventsEmptyState = document.getElementById('eventsEmptyState');
-    this.btnEmptyNewEvent = document.getElementById('btnEmptyNewEvent');
-    this.archiveActionBanner = document.getElementById('archiveActionBanner');
-    this.btnClearAllArchived = document.getElementById('btnClearAllArchived');
-
-    // Master Crew Elements
-    this.inputSearchMasterCrew = document.getElementById('inputSearchMasterCrew');
-    this.selectMasterRoleFilter = document.getElementById('selectMasterRoleFilter');
-    this.masterCrewGridContainer = document.getElementById('masterCrewGridContainer');
-    this.masterCrewEmptyState = document.getElementById('masterCrewEmptyState');
-    this.btnOpenAddMasterCrewModal = document.getElementById('btnOpenAddMasterCrewModal');
-    this.btnEmptyAddMasterCrew = document.getElementById('btnEmptyAddMasterCrew');
-
-    // Event Modal
-    this.btnOpenNewEventModal = document.getElementById('btnOpenNewEventModal');
-    this.modalEventBackdrop = document.getElementById('modalEventBackdrop');
-    this.btnCloseEventModal = document.getElementById('btnCloseEventModal');
-    this.btnCancelEventModal = document.getElementById('btnCancelEventModal');
-    this.formEvent = document.getElementById('formEvent');
-    this.modalEventTitle = document.getElementById('modalEventTitle');
-    this.inputEventId = document.getElementById('inputEventId');
-    this.inputCoupleName = document.getElementById('inputCoupleName');
-    this.inputEventDate = document.getElementById('inputEventDate');
-    this.inputClientPhone = document.getElementById('inputClientPhone');
-    this.inputClientIg = document.getElementById('inputClientIg');
-    this.inputFatherName = document.getElementById('inputFatherName');
-    this.inputMotherName = document.getElementById('inputMotherName');
-    this.eventLocationsContainer = document.getElementById('eventLocationsContainer');
-    this.btnAddLocationInForm = document.getElementById('btnAddLocationInForm');
-    this.badgeLocationCount = document.getElementById('badgeLocationCount');
-
-    // Operational Textareas & Package Preset Controls
-    this.textareaAttireNotes = document.getElementById('textareaAttireNotes');
-    this.textareaLogisticsNotes = document.getElementById('textareaLogisticsNotes');
-    this.textareaSpecialNotes = document.getElementById('textareaSpecialNotes');
-    this.selectOperationalPackageTemplate = document.getElementById('selectOperationalPackageTemplate');
-    this.btnApplyOperationalTemplate = document.getElementById('btnApplyOperationalTemplate');
-    this.selectQuickRentalAddon = document.getElementById('selectQuickRentalAddon');
-    this.btnAppendQuickRental = document.getElementById('btnAppendQuickRental');
-
-    // Excel Database Sync Settings Elements
-    this.tabBtnExcelSettings = document.getElementById('tabBtnExcelSettings');
-    this.panelExcelSettings = document.getElementById('panelExcelSettings');
-    this.btnTriggerExcelUpload = document.getElementById('btnTriggerExcelUpload');
-    this.inputUploadExcelDatabase = document.getElementById('inputUploadExcelDatabase');
-    this.btnResetExcelDatabase = document.getElementById('btnResetExcelDatabase');
-    this.badgeExcelDbStatus = document.getElementById('badgeExcelDbStatus');
-    this.statExcelPackageCount = document.getElementById('statExcelPackageCount');
-    this.statExcelPackageAreas = document.getElementById('statExcelPackageAreas');
-    this.statExcelRentalCount = document.getElementById('statExcelRentalCount');
-    this.statExcelDbSource = document.getElementById('statExcelDbSource');
-    this.statExcelDbLastSync = document.getElementById('statExcelDbLastSync');
-
-    // Detail View Elements
-    this.btnBackToList = document.getElementById('btnBackToList');
-    this.detailCoupleName = document.getElementById('detailCoupleName');
-    this.detailEventDate = document.getElementById('detailEventDate');
-    this.detailCountdownBadge = document.getElementById('detailCountdownBadge');
-    this.detailStatusPill = document.getElementById('detailStatusPill');
-    this.detailLocationsHeaderSummary = document.getElementById('detailLocationsHeaderSummary');
-    this.detailCrewCountBadge = document.getElementById('detailCrewCountBadge');
-    this.detailLocationsList = document.getElementById('detailLocationsList');
-    this.detailOperationalContent = document.getElementById('detailOperationalContent');
-    this.detailCrewList = document.getElementById('detailCrewList');
-    this.crewEmptyState = document.getElementById('crewEmptyState');
-    this.btnChooseMasterFromEmpty = document.getElementById('btnChooseMasterFromEmpty');
-    this.btnOpenSelectFromMasterModal = document.getElementById('btnOpenSelectFromMasterModal');
-    this.btnOpenAddCrewModal = document.getElementById('btnOpenAddCrewModal');
-
-    // Detail: WhatsApp Sharing
-    this.selectShareRecipient = document.getElementById('selectShareRecipient');
-    this.textareaSharePreview = document.getElementById('textareaSharePreview');
-    this.btnCopyShareText = document.getElementById('btnCopyShareText');
-    this.btnShareDirectWhatsApp = document.getElementById('btnShareDirectWhatsApp');
-    this.btnFormatClean = document.getElementById('btnFormatClean');
-    this.btnFormatEmoji = document.getElementById('btnFormatEmoji');
-
-    // Master Crew Modal
-    this.modalMasterCrewBackdrop = document.getElementById('modalMasterCrewBackdrop');
-    this.btnCloseMasterCrewModal = document.getElementById('btnCloseMasterCrewModal');
-    this.btnCancelMasterCrewModal = document.getElementById('btnCancelMasterCrewModal');
-    this.formMasterCrew = document.getElementById('formMasterCrew');
-    this.modalMasterCrewTitle = document.getElementById('modalMasterCrewTitle');
-    this.inputMasterCrewId = document.getElementById('inputMasterCrewId');
-    this.inputMasterCrewName = document.getElementById('inputMasterCrewName');
-    this.selectMasterCrewRole = document.getElementById('selectMasterCrewRole');
-    this.boxMasterCrewCustomRole = document.getElementById('boxMasterCrewCustomRole');
-    this.inputMasterCrewCustomRole = document.getElementById('inputMasterCrewCustomRole');
-    this.inputMasterCrewPhone = document.getElementById('inputMasterCrewPhone');
-    this.inputMasterCrewEmail = document.getElementById('inputMasterCrewEmail');
-    this.textareaMasterCrewNotes = document.getElementById('inputMasterCrewNotes');
-
-    // Select From Master Crew Modal
-    this.modalSelectMasterCrewBackdrop = document.getElementById('modalSelectMasterCrewBackdrop');
-    this.btnCloseSelectMasterModal = document.getElementById('btnCloseSelectMasterModal');
-    this.btnCancelSelectMasterModal = document.getElementById('btnCancelSelectMasterModal');
-    this.btnConfirmAssignMasterCrew = document.getElementById('btnConfirmAssignMasterCrew');
-    this.btnSelectAllInMasterModal = document.getElementById('btnSelectAllInMasterModal');
-    this.btnDeselectAllInMasterModal = document.getElementById('btnDeselectAllInMasterModal');
-    this.inputSearchInMasterModal = document.getElementById('inputSearchInMasterModal');
-    this.listSelectMasterCrew = document.getElementById('masterCrewSelectList');
-    this.labelSelectedMasterCount = document.getElementById('labelSelectedMasterCount');
-
-    // Crew Modal
-    this.modalCrewBackdrop = document.getElementById('modalCrewBackdrop');
-    this.btnCloseCrewModal = document.getElementById('btnCloseCrewModal');
-    this.btnCancelCrewModal = document.getElementById('btnCancelCrewModal');
-    this.formCrew = document.getElementById('formCrew');
-    this.modalCrewTitle = document.getElementById('modalCrewTitle');
-    this.inputCrewId = document.getElementById('inputCrewId');
-    this.inputCrewName = document.getElementById('inputCrewName');
-    this.selectCrewRole = document.getElementById('selectCrewRole');
-    this.boxCrewCustomRole = document.getElementById('boxCrewCustomRole');
-    this.inputCrewCustomRole = document.getElementById('inputCrewCustomRole');
-    this.chkSaveToMasterAlso = document.getElementById('chkSaveToMasterAlso');
-    this.inputCrewPhone = document.getElementById('inputCrewPhone');
-    this.inputCrewEmail = document.getElementById('inputCrewEmail');
-    this.textareaCrewNotes = document.getElementById('textareaCrewNotes');
-
-    // Owner Admin Settings Modal
-    this.btnOpenOwnerPanel = document.getElementById('btnOpenOwnerPanel');
-    this.modalOwnerAdminBackdrop = document.getElementById('modalOwnerAdminBackdrop');
-    this.btnCloseOwnerAdminModal = document.getElementById('btnCloseOwnerAdminModal');
-    this.btnCancelOwnerAdminModal = document.getElementById('btnCancelOwnerAdminModal');
-
-    // Tabs inside Owner Admin Modal
-    this.tabBtnBrandingSettings = document.getElementById('tabBtnBrandingSettings');
-    this.tabBtnAdminSettings = document.getElementById('tabBtnAdminSettings');
-    this.tabBtnSecuritySettings = document.getElementById('tabBtnSecuritySettings');
-    this.panelBrandingSettings = document.getElementById('panelBrandingSettings');
-    this.panelAdminSettings = document.getElementById('panelAdminSettings');
-    this.panelSecuritySettings = document.getElementById('panelSecuritySettings');
-
-    // Branding elements
-    this.formBrandSettings = document.getElementById('formBrandSettings');
-    this.inputBrandFullName = document.getElementById('inputBrandFullName');
-    this.inputBrandShortName = document.getElementById('inputBrandShortName');
-    this.inputBrandTagline = document.getElementById('inputBrandTagline');
-    this.btnTriggerLogoUpload = document.getElementById('btnTriggerLogoUpload');
-    this.inputBrandLogoFile = document.getElementById('inputBrandLogoFile');
-    this.btnResetBrandLogo = document.getElementById('btnResetBrandLogo');
-    this.previewBrandTitle = document.getElementById('previewBrandTitle');
-    this.previewBrandSubtitle = document.getElementById('previewBrandSubtitle');
-    this.previewBrandIcon = document.getElementById('previewBrandIcon');
-
-    // Admin WhatsApp elements
-    this.adminActiveHighlightBox = document.getElementById('adminActiveHighlightBox');
-    this.adminOwnerList = document.getElementById('ownerAdminCardsList');
-    this.btnOpenAddAdminForm = document.getElementById('btnOpenAddAdminForm');
-    this.adminFormCard = document.getElementById('containerAdminForm');
-    this.btnCancelAdminForm = document.getElementById('btnCancelAdminForm');
-    this.formAddAdmin = document.getElementById('formAdminData');
-    this.inputAdminId = document.getElementById('inputAdminId');
-    this.inputAdminName = document.getElementById('inputAdminName');
-    this.inputAdminPhone = document.getElementById('inputAdminPhone');
-    this.inputAdminEmail = document.getElementById('inputAdminEmail');
-    this.checkIsPrimaryAdmin = document.getElementById('checkIsPrimaryAdmin');
-
-    // Backup & Restore elements
-    this.btnExportData = document.getElementById('btnExportDataBackup');
-    this.inputImportFile = document.getElementById('inputImportDataBackup');
-    this.btnFactoryReset = document.getElementById('btnFactoryResetApp');
-
-    // iOS Install Modal elements
-    this.btnCloseIosInstallModal = document.getElementById('btnCloseIosInstallModal');
-    this.btnGotItIosInstall = document.getElementById('btnGotItIosInstall');
-
-    // Notifications H-3
-    this.h3UrgentBanner = document.getElementById('h3UrgentBanner');
-    this.btnCloseH3Banner = document.getElementById('btnCloseH3Banner');
-    this.btnViewH3Events = document.getElementById('btnViewH3Events');
-    this.btnNotificationBell = document.getElementById('btnNotificationBell');
-    this.headerNotificationCount = document.getElementById('headerNotificationCount');
-    this.notificationDropdown = document.getElementById('notificationDropdown');
-    this.notificationDropdownList = document.getElementById('notificationDropdownList');
-    this.btnRequestWebNotif = document.getElementById('btnRequestWebNotif');
-  }
-
-  // ==================== EVENT LISTENERS BINDING ====================
-  bindEvents() {
-    // Navigation
-    if (this.brandHomeBtn) this.brandHomeBtn.addEventListener('click', () => this.switchView('events'));
-    if (this.navEventsBtn) this.navEventsBtn.addEventListener('click', () => this.switchView('events'));
-    if (this.navMasterCrewBtn) this.navMasterCrewBtn.addEventListener('click', () => this.switchView('masterCrew'));
-    if (this.btnBackToList) this.btnBackToList.addEventListener('click', () => this.switchView('events'));
-
-    // Event Filters
-    document.querySelectorAll('.tabs-filter .tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tabs-filter .tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.activeFilter = btn.dataset.filter || 'upcoming';
-        this.renderEventList();
-      });
-    });
-
-    if (this.inputSearchEvents) {
-      this.inputSearchEvents.addEventListener('input', () => this.renderEventList());
-    }
-
-    if (this.btnClearAllArchived) {
-      this.btnClearAllArchived.addEventListener('click', () => this.clearAllArchivedEvents());
-    }
-
-    // New / Edit Event Modal
-    if (this.btnOpenNewEventModal) this.btnOpenNewEventModal.addEventListener('click', () => this.openEventModal('add'));
-    if (this.btnEmptyNewEvent) this.btnEmptyNewEvent.addEventListener('click', () => this.openEventModal('add'));
-    if (this.btnCloseEventModal) this.btnCloseEventModal.addEventListener('click', () => this.closeEventModal());
-    if (this.btnCancelEventModal) this.btnCancelEventModal.addEventListener('click', () => this.closeEventModal());
-    if (this.formEvent) this.formEvent.addEventListener('submit', (e) => this.handleEventFormSubmit(e));
-    if (this.btnAddLocationInForm) this.btnAddLocationInForm.addEventListener('click', () => this.addLocationFormCard());
-
-    const btnEditLocations = document.getElementById('btnEditLocationsFromSection');
-    if (btnEditLocations) {
-      btnEditLocations.addEventListener('click', () => {
-        if (this.currentEventId) {
-          this.openEventModal('edit', this.currentEventId);
-        }
-      });
-    }
-
-    const btnEditOperational = document.getElementById('btnEditOperationalFromSection');
-    if (btnEditOperational) {
-      btnEditOperational.addEventListener('click', () => {
-        if (this.currentEventId) {
-          this.openEventModal('edit', this.currentEventId);
-        }
-      });
-    }
-
-    // Operational Package Template Auto-Fill Handlers
-    if (this.btnApplyOperationalTemplate) {
-      this.btnApplyOperationalTemplate.addEventListener('click', () => {
-        const pkgId = this.selectOperationalPackageTemplate ? this.selectOperationalPackageTemplate.value : '';
-        this.applyOperationalPackageTemplate(pkgId);
-      });
-    }
-    if (this.btnAppendQuickRental) {
-      this.btnAppendQuickRental.addEventListener('click', () => {
-        this.appendQuickRentalToLogistics();
-      });
-    }
-
-    // Excel Database Upload, Reset & Preview Area Tabs
-    if (this.btnTriggerExcelUpload && this.inputUploadExcelDatabase) {
-      this.btnTriggerExcelUpload.addEventListener('click', () => {
-        this.inputUploadExcelDatabase.click();
-      });
-    }
-
-    if (this.inputUploadExcelDatabase) {
-      this.inputUploadExcelDatabase.addEventListener('change', async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-          await this.handleExcelDatabaseUpload(file);
-          e.target.value = '';
-        }
-      });
-    }
-
-    if (this.btnResetExcelDatabase) {
-      this.btnResetExcelDatabase.addEventListener('click', () => {
-        this.handleResetExcelDatabase();
-      });
-    }
-
-    document.querySelectorAll('.excel-tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const area = btn.getAttribute('data-excel-area') || 'Area Sekitar';
-        this.renderExcelPreviewTable(area);
-      });
-    });
-
-    // WhatsApp Briefing Section D
-    if (this.selectShareRecipient) {
-      this.selectShareRecipient.addEventListener('change', () => this.handleShareRecipientChange());
-    }
-    if (this.btnCopyShareText) {
-      this.btnCopyShareText.addEventListener('click', () => this.copyShareContent());
-    }
-    if (this.btnShareDirectWhatsApp) {
-      this.btnShareDirectWhatsApp.addEventListener('click', () => this.openDirectWhatsAppShare());
-    }
-    if (this.btnFormatClean) {
-      this.btnFormatClean.addEventListener('click', () => this.setShareEmojiMode(false));
-    }
-    if (this.btnFormatEmoji) {
-      this.btnFormatEmoji.addEventListener('click', () => this.setShareEmojiMode(true));
-    }
-
-    // Crew Selection From Master
-    if (this.btnOpenSelectFromMasterModal) this.btnOpenSelectFromMasterModal.addEventListener('click', () => this.openSelectMasterModal());
-    if (this.btnChooseMasterFromEmpty) this.btnChooseMasterFromEmpty.addEventListener('click', () => this.openSelectMasterModal());
-    if (this.btnCloseSelectMasterModal) this.btnCloseSelectMasterModal.addEventListener('click', () => this.closeSelectMasterModal());
-    if (this.btnCancelSelectMasterModal) this.btnCancelSelectMasterModal.addEventListener('click', () => this.closeSelectMasterModal());
-    if (this.inputSearchInMasterModal) this.inputSearchInMasterModal.addEventListener('input', () => this.renderSelectMasterList());
-    if (this.btnSelectAllInMasterModal) this.btnSelectAllInMasterModal.addEventListener('click', () => this.selectAllMasterModal(true));
-    if (this.btnDeselectAllInMasterModal) this.btnDeselectAllInMasterModal.addEventListener('click', () => this.selectAllMasterModal(false));
-    if (this.btnConfirmAssignMasterCrew) this.btnConfirmAssignMasterCrew.addEventListener('click', () => this.confirmAssignMasterCrew());
-
-    // Custom Crew Modal
-    if (this.btnOpenAddCrewModal) this.btnOpenAddCrewModal.addEventListener('click', () => this.openCrewModal('add'));
-    if (this.btnCloseCrewModal) this.btnCloseCrewModal.addEventListener('click', () => this.closeCrewModal());
-    if (this.btnCancelCrewModal) this.btnCancelCrewModal.addEventListener('click', () => this.closeCrewModal());
-    if (this.formCrew) this.formCrew.addEventListener('submit', (e) => this.handleCrewFormSubmit(e));
-    if (this.selectCrewRole) {
-      this.selectCrewRole.addEventListener('change', () => {
-        const isManual = this.selectCrewRole.value === 'MANUAL';
-        if (this.boxCrewCustomRole) this.boxCrewCustomRole.classList.toggle('hidden', !isManual);
-        if (isManual && this.inputCrewCustomRole) this.inputCrewCustomRole.focus();
-      });
-    }
-
-    // Master Crew Directory Controls
-    if (this.btnOpenAddMasterCrewModal) this.btnOpenAddMasterCrewModal.addEventListener('click', () => this.openMasterCrewModal());
-    if (this.btnEmptyAddMasterCrew) this.btnEmptyAddMasterCrew.addEventListener('click', () => this.openMasterCrewModal());
-    if (this.btnCloseMasterCrewModal) this.btnCloseMasterCrewModal.addEventListener('click', () => this.closeMasterCrewModal());
-    if (this.btnCancelMasterCrewModal) this.btnCancelMasterCrewModal.addEventListener('click', () => this.closeMasterCrewModal());
-    if (this.formMasterCrew) this.formMasterCrew.addEventListener('submit', (e) => this.handleMasterCrewFormSubmit(e));
-    if (this.selectMasterCrewRole) {
-      this.selectMasterCrewRole.addEventListener('change', () => {
-        const isManual = this.selectMasterCrewRole.value === 'MANUAL';
-        if (this.boxMasterCrewCustomRole) this.boxMasterCrewCustomRole.classList.toggle('hidden', !isManual);
-        if (isManual && this.inputMasterCrewCustomRole) this.inputMasterCrewCustomRole.focus();
-      });
-    }
-    if (this.inputSearchMasterCrew) this.inputSearchMasterCrew.addEventListener('input', () => this.renderMasterCrewList());
-    if (this.selectMasterRoleFilter) this.selectMasterRoleFilter.addEventListener('change', () => this.renderMasterCrewList());
-
-    // Owner Admin Panel & Tab Navigation
-    if (this.btnOpenOwnerPanel) this.btnOpenOwnerPanel.addEventListener('click', () => this.openOwnerAdminModal());
-    if (this.btnCloseOwnerAdminModal) this.btnCloseOwnerAdminModal.addEventListener('click', () => this.closeOwnerAdminModal());
-    if (this.btnCancelOwnerAdminModal) this.btnCancelOwnerAdminModal.addEventListener('click', () => this.closeOwnerAdminModal());
-
-    document.querySelectorAll('.owner-tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const panelId = btn.getAttribute('data-panel');
-        if (panelId) this.switchOwnerTab(panelId);
-      });
-    });
-
-    // Branding Settings
-    if (this.formBrandSettings) this.formBrandSettings.addEventListener('submit', (e) => this.handleSaveBrandConfig(e));
-    if (this.btnTriggerLogoUpload) this.btnTriggerLogoUpload.addEventListener('click', () => this.inputBrandLogoFile && this.inputBrandLogoFile.click());
-    if (this.inputBrandLogoFile) {
-      this.inputBrandLogoFile.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files[0]) {
-          resizeImageToDataUrl(e.target.files[0], 200, 200, (err, dataUrl) => {
-            if (!err) {
-              this.brandConfig.logoType = 'image';
-              this.brandConfig.logoValue = dataUrl;
-              this.updateBrandLivePreview();
-            }
-          });
-        }
-      });
-    }
-    if (this.btnResetBrandLogo) {
-      this.btnResetBrandLogo.addEventListener('click', () => {
-        this.brandConfig.logoType = 'svg';
-        this.brandConfig.logoValue = 'svg-rings';
-        this.updateBrandLivePreview();
-      });
-    }
-
-    // Live input listeners on Brand form
-    if (this.inputBrandShortName) {
-      this.inputBrandShortName.addEventListener('input', () => this.updateBrandLivePreview());
-    }
-    if (this.inputBrandTagline) {
-      this.inputBrandTagline.addEventListener('input', () => this.updateBrandLivePreview());
-    }
-
-    // Quick Icon Picker in Branding
-    document.querySelectorAll('.quick-icon-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const icon = btn.getAttribute('data-icon');
-        if (icon && BRAND_LOGO_SVGS[icon]) {
-          this.brandConfig.logoType = 'svg';
-          this.brandConfig.logoValue = icon;
-        } else if (icon) {
-          this.brandConfig.logoType = 'emoji';
-          this.brandConfig.logoValue = icon;
-        }
-        this.updateBrandLivePreview();
-      });
-    });
-
-    // Admin WA Form Controls
-    if (this.btnOpenAddAdminForm) this.btnOpenAddAdminForm.addEventListener('click', () => this.openAdminFormForAdd());
-    if (this.btnCancelAdminForm) this.btnCancelAdminForm.addEventListener('click', () => this.closeAdminForm());
-    if (this.formAddAdmin) this.formAddAdmin.addEventListener('submit', (e) => this.handleSaveAdminSubmit(e));
-
-    // Delegated click actions for Admin list & highlight box
-    if (this.modalOwnerAdminBackdrop) {
-      this.modalOwnerAdminBackdrop.addEventListener('click', (e) => {
-        const btnPrimary = e.target.closest('.btn-set-primary-admin');
-        if (btnPrimary) {
-          const id = btnPrimary.getAttribute('data-id');
-          if (id) this.setPrimaryAdmin(id);
-          return;
-        }
-
-        const btnEdit = e.target.closest('.btn-edit-admin');
-        if (btnEdit) {
-          const id = btnEdit.getAttribute('data-id');
-          if (id) this.openAdminFormForEdit(id);
-          return;
-        }
-
-        const btnDelete = e.target.closest('.btn-delete-admin');
-        if (btnDelete) {
-          const id = btnDelete.getAttribute('data-id');
-          if (id) this.deleteAdmin(id);
-          return;
-        }
-      });
-    }
-
-    // Backup & Restore
-    if (this.btnExportData) this.btnExportData.addEventListener('click', () => this.handleExportDataBackup());
-    if (this.inputImportFile) this.inputImportFile.addEventListener('change', (e) => this.handleImportDataBackup(e));
-    if (this.btnFactoryReset) this.btnFactoryReset.addEventListener('click', () => this.handleFactoryReset());
-
-    // iOS Install Modal Close Button
-    if (this.btnCloseIosInstallModal) {
-      this.btnCloseIosInstallModal.addEventListener('click', () => {
-        const modal = document.getElementById('iosInstallModal');
-        if (modal) modal.classList.remove('active');
-      });
-    }
-
-    // Quick WA Brief Jump Anchor
-    const btnJumpWA = document.getElementById('btnJumpToShareWA');
-    if (btnJumpWA) {
-      btnJumpWA.addEventListener('click', (e) => {
-        e.preventDefault();
-        const target = document.getElementById('sectionShareWA');
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    }
-
-    // Notifications H-3
-    if (this.btnCloseH3Banner) this.btnCloseH3Banner.addEventListener('click', () => this.dismissH3Banner());
-    if (this.btnViewH3Events) {
-      this.btnViewH3Events.addEventListener('click', () => {
-        this.switchView('events');
-        const tabH3 = document.getElementById('tabH3');
-        if (tabH3) tabH3.click();
-      });
-    }
-    if (this.btnNotificationBell) {
-      this.btnNotificationBell.addEventListener('click', () => {
-        if (this.notificationDropdown) this.notificationDropdown.classList.toggle('hidden');
-      });
-    }
-    if (this.btnRequestWebNotif) this.btnRequestWebNotif.addEventListener('click', () => this.requestWebNotification());
-  }
-
-  // ==================== VIEW SWITCHING ====================
-  switchView(viewName) {
-    this.currentView = viewName;
-
-    // Hide all views
-    [this.viewListEvents, this.viewMasterCrew, this.viewDetailEvent].forEach(v => {
-      if (v) v.classList.remove('active');
-    });
-
-    // Remove active from all nav items
-    [this.navEventsBtn, this.navMasterCrewBtn].forEach(b => {
-      if (b) b.classList.remove('active');
-    });
-
-    if (viewName === 'events') {
-      if (this.viewListEvents) this.viewListEvents.classList.add('active');
-      if (this.navEventsBtn) this.navEventsBtn.classList.add('active');
-      this.render();
-    } else if (viewName === 'masterCrew') {
-      if (this.viewMasterCrew) this.viewMasterCrew.classList.add('active');
-      if (this.navMasterCrewBtn) this.navMasterCrewBtn.classList.add('active');
-      this.renderMasterCrewList();
-    } else if (viewName === 'detail') {
-      if (this.viewDetailEvent) this.viewDetailEvent.classList.add('active');
-      this.renderDetailView();
-    }
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  switchToDetail(eventId) {
-    this.currentEventId = eventId;
-    this.switchView('detail');
-  }
-
-  // ==================== EVENT MODAL CRUD ====================
-  openEventModal(mode = 'add', eventId = null) {
-    if (this.selectOperationalPackageTemplate) this.selectOperationalPackageTemplate.value = '';
-    if (this.selectQuickRentalAddon) this.selectQuickRentalAddon.value = '';
-
-    if (mode === 'edit' && eventId) {
-      const ev = this.events.find(x => x.id === eventId);
-      if (!ev) return;
-
-      this.inputEventId.value = ev.id;
-      this.modalEventTitle.textContent = 'Edit Data Acara Pernikahan';
-      this.inputCoupleName.value = ev.coupleName || '';
-      this.inputEventDate.value = ev.date || '';
-      this.inputClientPhone.value = ev.clientPhone || '';
-      this.inputClientIg.value = ev.clientIg || '';
-      this.inputFatherName.value = ev.fatherName || '';
-      this.inputMotherName.value = ev.motherName || '';
-
-      this.textareaAttireNotes.value = ev.attireNotes || '';
-      this.textareaLogisticsNotes.value = ev.logisticsNotes || '';
-      this.textareaSpecialNotes.value = ev.specialNotes || '';
-
-      this.renderEventLocationFormItems(this.getEventLocations(ev));
-    } else {
-      this.inputEventId.value = '';
-      this.modalEventTitle.textContent = 'Tambah Acara Pernikahan Baru';
-      this.formEvent.reset();
-
-      if (this.selectOperationalPackageTemplate) this.selectOperationalPackageTemplate.value = '';
-      if (this.selectQuickRentalAddon) this.selectQuickRentalAddon.value = '';
-
-      this.renderEventLocationFormItems([
-        {
-          id: 'loc-1',
-          locName: 'Lokasi 1',
-          eventName: 'Resepsi',
-          label: 'Resepsi',
-          time: '13.00 WIB - Selesai',
-          venueName: '',
-          venueAddress: '',
-          mapsUrl: '',
-          notes: ''
-        }
-      ]);
-    }
-
-    if (this.modalEventBackdrop) this.modalEventBackdrop.classList.add('active');
-  }
-
-  closeEventModal() {
-    if (this.modalEventBackdrop) this.modalEventBackdrop.classList.remove('active');
-  }
-
-  handleEventFormSubmit(e) {
-    e.preventDefault();
-
-    const coupleName = this.inputCoupleName.value.trim();
-    const eventDate = this.inputEventDate.value;
-
-    if (!coupleName || !eventDate) {
-      this.showToast('Nama pasangan dan tanggal acara wajib diisi!', 'warning');
-      return;
-    }
-
-    const eventId = this.inputEventId.value;
-    const isEdit = !!eventId;
-    const existingEvent = isEdit ? this.events.find(x => x.id === eventId) : null;
-
-    // Collect Locations
-    const locationCards = this.eventLocationsContainer.querySelectorAll('.event-location-form-card');
-    const locations = [];
-    locationCards.forEach((card, idx) => {
-      const inputLoc = card.querySelector('.input-loc-name');
-      const inputEvent = card.querySelector('.input-loc-event-name') || card.querySelector('.input-loc-label');
-      const inputTime = card.querySelector('.input-loc-time');
-      const inputVenueName = card.querySelector('.input-loc-venue-name');
-      const inputVenueAddress = card.querySelector('.input-loc-venue-address');
-      const inputMapsUrl = card.querySelector('.input-loc-maps-url');
-      const inputNotes = card.querySelector('.input-loc-notes');
-
-      const locName = inputLoc ? inputLoc.value.trim() || `Lokasi ${idx + 1}` : `Lokasi ${idx + 1}`;
-      const eventName = inputEvent ? inputEvent.value.trim() || (idx === 0 ? 'Resepsi' : `Acara ${idx + 1}`) : (idx === 0 ? 'Resepsi' : `Acara ${idx + 1}`);
-      const time = inputTime ? inputTime.value.trim() : '';
-      const venueName = inputVenueName ? inputVenueName.value.trim() : '';
-      const venueAddress = inputVenueAddress ? inputVenueAddress.value.trim() : '';
-      const mapsUrl = inputMapsUrl ? inputMapsUrl.value.trim() : '';
-      const notes = inputNotes ? inputNotes.value.trim() : '';
-
-      locations.push({
-        id: card.dataset.locationId || `loc-${idx + 1}`,
-        locName,
-        eventName,
-        label: eventName,
-        name: eventName,
-        time,
-        venueName,
-        venueAddress,
-        mapsUrl,
-        notes
-      });
-    });
-
-    const selectedTemplateId = this.selectOperationalPackageTemplate ? this.selectOperationalPackageTemplate.value : '';
-    const pkg = (this.harvyPackages || HARVY_PACKAGES).find(p => p.id === selectedTemplateId);
-
-    const eventData = {
-      id: isEdit ? eventId : `event-${Date.now()}`,
-      coupleName,
-      date: eventDate,
-      packageId: pkg ? pkg.id : (existingEvent?.packageId || ''),
-      packageName: pkg ? pkg.name : (existingEvent?.packageName || ''),
-      clientPhone: this.inputClientPhone.value.trim(),
-      clientIg: this.inputClientIg.value.trim(),
-      fatherName: this.inputFatherName.value.trim(),
-      motherName: this.inputMotherName.value.trim(),
-      locations: locations.length > 0 ? locations : [
-        {
-          id: 'loc-1',
-          locName: 'Lokasi 1',
-          eventName: 'Resepsi',
-          label: 'Resepsi',
-          name: 'Resepsi',
-          time: '',
-          venueName: '',
-          venueAddress: '',
-          mapsUrl: '',
-          notes: ''
-        }
-      ],
-      attireNotes: this.textareaAttireNotes.value.trim(),
-      logisticsNotes: this.textareaLogisticsNotes.value.trim(),
-      specialNotes: this.textareaSpecialNotes.value.trim(),
-      isArchived: existingEvent?.isArchived || false,
-      crew: existingEvent?.crew || []
-    };
-
-    if (isEdit) {
-      const idx = this.events.findIndex(x => x.id === eventId);
-      if (idx !== -1) {
-        eventData.crew = this.events[idx].crew || [];
-        eventData.isArchived = this.events[idx].isArchived || false;
-        this.events[idx] = eventData;
-      }
-    } else {
-      this.events.unshift(eventData);
-    }
-
-    this.saveEvents();
-    this.updateMetrics();
-    this.closeEventModal();
-    this.showToast(isEdit ? 'Data acara berhasil diperbarui!' : 'Acara pernikahan baru berhasil ditambahkan!', 'success');
-    this.switchToDetail(eventData.id);
-  }
-
-  // ==================== DETAIL VIEW RENDERING ====================
-  renderDetailView() {
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (!ev) {
-      this.switchView('events');
-      return;
-    }
-
-    // Top Header
-    if (this.detailCoupleName) this.detailCoupleName.textContent = ev.coupleName || 'Nama Pasangan';
-    if (this.detailEventDate) this.detailEventDate.textContent = this.formatDateIndonesian(ev.date);
-
-    const countdown = this.calculateCountdown(ev.date);
-    if (this.detailCountdownBadge) {
-      this.detailCountdownBadge.textContent = countdown.badgeText;
-      this.detailCountdownBadge.className = `countdown-badge large ${countdown.badgeClass}`;
-    }
-
-    if (this.detailStatusPill) {
-      if (ev.isArchived) {
-        this.detailStatusPill.textContent = 'Diarsipkan';
-        this.detailStatusPill.className = 'status-pill archived';
-      } else if (countdown.daysDiff < 0) {
-        this.detailStatusPill.textContent = 'Selesai';
-        this.detailStatusPill.className = 'status-pill completed';
-      } else {
-        this.detailStatusPill.textContent = 'Mendatang';
-        this.detailStatusPill.className = 'status-pill upcoming';
-      }
-    }
-
-    const locations = this.getEventLocations(ev);
-    if (this.detailLocationsHeaderSummary) {
-      const summaryParts = locations.map(l => `${this.escapeHtml(l.label || 'Acara')}: <strong>${this.escapeHtml(l.time || '-')}</strong>`);
-      this.detailLocationsHeaderSummary.innerHTML = summaryParts.join(' | ') || '-';
-    }
-
-    if (this.detailCrewCountBadge) {
-      const count = ev.crew ? ev.crew.length : 0;
-      this.detailCrewCountBadge.innerHTML = `${UI_ICONS.users} <span>${count} Kru Bertugas</span>`;
-    }
-
-    // Render Sub-Sections
-    this.renderLocationSection(ev);
-    this.renderOperationalSection(ev);
-    this.renderCrewSection(ev);
-    this.populateShareRecipients(ev);
-    this.generateShareSummary(ev);
-  }
-
-  // ==================== MULTI-LOCATION MANAGEMENT ====================
-  getEventLocations(ev) {
-    if (ev.locations && Array.isArray(ev.locations) && ev.locations.length > 0) {
-      return ev.locations.map((l, idx) => {
-        const defaultLocName = `Lokasi ${idx + 1}`;
-        let locName = (l.locName || (l.name && l.name.toLowerCase().startsWith('lokasi') ? l.name : defaultLocName)).trim();
-        let eventName = (l.eventName || l.label || (l.name && !l.name.toLowerCase().startsWith('lokasi') ? l.name : (idx === 0 ? 'Resepsi' : 'Akad Nikah'))).trim();
-        let time = (l.time || (l.startTime ? `${l.startTime} WIB - ${l.endTime || 'Selesai'}` : '13.00 WIB - Selesai')).trim();
-        const venueName = (l.venueName && l.venueName !== '-') ? l.venueName.trim() : (l.venueType ? l.venueType.trim() : (l.name ? l.name.trim() : '-'));
-        const venueAddress = (l.venueAddress && l.venueAddress !== '-') ? l.venueAddress.trim() : '-';
-        const mapsUrl = (l.mapsUrl || l.customMapsUrl || '').trim();
-        const notes = (l.notes || '').trim();
-
-        return {
-          ...l,
-          locName,
-          eventName,
-          label: eventName,
-          name: eventName,
-          time,
-          venueName,
-          venueAddress,
-          mapsUrl,
-          notes
-        };
-      });
-    }
-    const locs = [];
-    if (ev.akadTime || ev.venueName) {
-      locs.push({
-        id: 'loc-1',
-        locName: 'Lokasi 1',
-        eventName: 'Akad Nikah',
-        label: 'Akad Nikah',
-        name: 'Akad Nikah',
-        time: ev.akadTime || '08.00 WIB - Selesai',
-        venueName: ev.venueName || 'Kediaman Mempelai',
-        venueAddress: ev.venueAddress || 'Alamat Belum Diisi',
-        mapsUrl: ev.customMapsUrl || '',
-        notes: ''
-      });
-    }
-    if (ev.resepsiTime) {
-      const idx2 = locs.length + 1;
-      locs.push({
-        id: `loc-${idx2}`,
-        locName: `Lokasi ${idx2}`,
-        eventName: 'Resepsi',
-        label: 'Resepsi',
-        name: 'Resepsi',
-        time: ev.resepsiTime || '13.00 WIB - Selesai',
-        venueName: ev.venueName || 'Kediaman Mempelai',
-        venueAddress: ev.venueAddress || 'Alamat Belum Diisi',
-        mapsUrl: ev.customMapsUrl || '',
-        notes: ''
-      });
-    }
-    return locs.length > 0 ? locs : [
-      {
-        id: 'loc-1',
-        locName: 'Lokasi 1',
-        eventName: 'Resepsi',
-        label: 'Resepsi',
-        name: 'Resepsi',
-        time: '13.00 WIB - Selesai',
-        venueName: ev.venueName || 'Kediaman Mempelai',
-        venueAddress: ev.venueAddress || 'Alamat Belum Diisi',
-        mapsUrl: ev.customMapsUrl || '',
-        notes: ''
-      }
-    ];
-  }
-
-  renderLocationSection(ev) {
-    if (!this.detailLocationsList) return;
-    const locations = this.getEventLocations(ev);
-
-    this.detailLocationsList.innerHTML = locations.map((loc, idx) => {
-      const num = idx + 1;
-      const mapQueryParts = [];
-      if (loc.venueName) mapQueryParts.push(loc.venueName.trim());
-      if (loc.venueAddress) mapQueryParts.push(loc.venueAddress.trim());
-      const query = mapQueryParts.join(', ') || 'Gresik';
-      const openMapsUrl = loc.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-
-      return `
-        <div class="location-item-card">
-          <div class="lic-header">
-            <div class="lic-title">
-              <span class="lic-number">#${num}</span>
-              <span>${this.escapeHtml(loc.locName || `Lokasi ${num}`)}: ${this.escapeHtml(loc.eventName || loc.label || 'Resepsi')}</span>
-            </div>
-            <div class="lic-time-badge">${this.escapeHtml(loc.time || '-')}</div>
-          </div>
-          <div class="lic-body">
-            <div class="lic-venue-name">${this.escapeHtml(loc.venueName || '-')}</div>
-            <div class="lic-venue-address">${this.escapeHtml(loc.venueAddress || '-')}</div>
-            ${loc.notes ? `<div class="lic-notes"><strong>Keterangan:</strong> ${this.escapeHtml(loc.notes)}</div>` : ''}
-          </div>
-          <div class="lic-footer">
-            <a href="${openMapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-              ${UI_ICONS.externalMap} <span>Buka Google Maps</span>
-            </a>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  renderEventLocationFormItems(locations) {
-    if (!this.eventLocationsContainer) return;
-    this.eventLocationsContainer.innerHTML = '';
-    locations.forEach(loc => this.addLocationFormCard(loc));
-    this.updateLocationCountBadge();
-  }
-
-  addLocationFormCard(data = null) {
-    if (!this.eventLocationsContainer) return;
-    const card = document.createElement('div');
-    card.className = 'event-location-form-card';
-    card.style.background = '#FFFFFF';
-    card.style.border = '1px solid var(--gold-200)';
-    card.style.borderRadius = 'var(--radius-md)';
-    card.style.padding = '14px 16px';
-    card.style.marginBottom = '12px';
-    card.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.03)';
-    card.style.maxWidth = '100%';
-    card.style.boxSizing = 'border-box';
-
-    const locId = data ? data.id : `loc-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    card.dataset.locationId = locId;
-
-    const existingCount = this.eventLocationsContainer ? (this.eventLocationsContainer.querySelectorAll('.event-location-form-card').length || this.eventLocationsContainer.children.length) : 0;
-    const defaultIndex = existingCount + 1;
-
-    const locName = data ? (data.locName || (data.name && data.name.toLowerCase().startsWith('lokasi') ? data.name : `Lokasi ${defaultIndex}`)) : `Lokasi ${defaultIndex}`;
-    const eventName = data ? (data.eventName || data.label || data.name || (defaultIndex === 1 ? 'Resepsi' : 'Akad Nikah')) : (defaultIndex === 1 ? 'Resepsi' : 'Akad Nikah');
-    const time = data ? (data.time || '13.00 WIB - Selesai') : (defaultIndex === 1 ? '13.00 WIB - Selesai' : '08.00 WIB - Selesai');
-    const venueName = data ? (data.venueName || data.venueType || '') : '';
-    const venueAddress = data ? (data.venueAddress || '') : '';
-    const mapsUrl = data ? (data.mapsUrl || data.customMapsUrl || '') : '';
-    const notes = data ? (data.notes || '') : '';
-
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px dashed #E2E8F0;">
-        <span class="loc-card-badge" style="font-weight:800; font-size:0.82rem; color:var(--gold-dark); background:#FAF6ED; padding:3px 10px; border-radius:6px; border:1px solid var(--gold-300);">
-          ${this.escapeHtml(locName)}
-        </span>
-        <button type="button" class="btn-remove-loc" style="background:none; border:none; color:#DC2626; font-size:0.82rem; font-weight:700; cursor:pointer;">&times; Hapus Acara</button>
-      </div>
-
-      <!-- Baris 1: Lokasi Manual & Waktu Jam Acara -->
-      <div class="loc-card-row-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:10px;">
-        <div style="min-width:0; width:100%;">
-          <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
-            Lokasi (Manual) <span class="required">*</span>
-          </label>
-          <input type="text" class="form-control input-loc-name" value="${this.escapeHtml(locName)}" placeholder="Cth: Lokasi 1 / Lokasi 2 / Kediaman Mempelai" required>
-        </div>
-        <div style="min-width:0; width:100%;">
-          <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
-            Waktu / Jam Acara <span class="required">*</span>
-          </label>
-          <input type="text" class="form-control input-loc-time" value="${this.escapeHtml(time)}" placeholder="Cth: 13.00 WIB - Selesai" required>
-        </div>
-      </div>
-
-      <!-- Baris 2: Nama Acara (di bawah Lokasi) -->
-      <div style="margin-bottom:10px;">
-        <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
-          Nama Acara <span class="required">*</span>
-        </label>
-        <input type="text" class="form-control input-loc-event-name input-loc-label" value="${this.escapeHtml(eventName)}" placeholder="Cth: Resepsi / Akad Nikah / Temu Manten" required>
-      </div>
-
-      <!-- Baris 3: Nama Tempat / Gedung / Kediaman -->
-      <div style="margin-bottom:10px;">
-        <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
-          Nama Tempat / Gedung / Kediaman
-        </label>
-        <input type="text" class="form-control input-loc-venue-name" value="${this.escapeHtml(venueName)}" placeholder="Cth: Kediaman Mempelai Wanita">
-      </div>
-
-      <!-- Baris 4: Alamat Lengkap -->
-      <div style="margin-bottom:10px;">
-        <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
-          Alamat Lengkap
-        </label>
-        <input type="text" class="form-control input-loc-venue-address" value="${this.escapeHtml(venueAddress)}" placeholder="Dsn. Dukuh, Desa Bungah, Gresik">
-      </div>
-
-      <!-- Baris 5: Link Google Maps -->
-      <div style="margin-bottom:10px;">
-        <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-primary); display:block;">
-          Link Google Maps (Opsional)
-        </label>
-        <input type="text" class="form-control input-loc-maps-url" value="${this.escapeHtml(mapsUrl)}" placeholder="https://maps.app.goo.gl/...">
-      </div>
-
-      <!-- Baris 6: Keterangan Khusus Lokasi Ini -->
-      <div>
-        <label class="form-label" style="font-size:0.78rem; font-weight:700; margin-bottom:4px; color:var(--ink-secondary); display:block;">
-          Keterangan Khusus Lokasi Ini
-        </label>
-        <input type="text" class="form-control input-loc-notes" value="${this.escapeHtml(notes)}" placeholder="Cth: Area parkir tamu di lapangan terdekat">
-      </div>
-    `;
-
-    // Live update badge as user types in input-loc-name
-    const inputLoc = card.querySelector('.input-loc-name');
-    const badge = card.querySelector('.loc-card-badge');
-    if (inputLoc && badge) {
-      inputLoc.addEventListener('input', () => {
-        badge.textContent = inputLoc.value.trim() || 'Lokasi';
-      });
-    }
-
-    const btnRemove = card.querySelector('.btn-remove-loc');
-    if (btnRemove) {
-      btnRemove.addEventListener('click', () => {
-        card.remove();
-        this.reindexLocationFormCards();
-        this.updateLocationCountBadge();
-      });
-    }
-
-    this.eventLocationsContainer.appendChild(card);
-    this.reindexLocationFormCards();
-    this.updateLocationCountBadge();
-  }
-
-  reindexLocationFormCards() {
-    if (!this.eventLocationsContainer) return;
-    const cards = this.eventLocationsContainer.querySelectorAll('.event-location-form-card');
-    cards.forEach((c, i) => {
-      const badge = c.querySelector('.loc-card-badge');
-      const inputLoc = c.querySelector('.input-loc-name');
-      const val = inputLoc ? inputLoc.value.trim() : '';
-      if (badge) badge.textContent = val || `Lokasi ${i + 1}`;
-    });
-  }
-
-  updateLocationCountBadge() {
-    if (!this.badgeLocationCount || !this.eventLocationsContainer) return;
-    const count = this.eventLocationsContainer.querySelectorAll('.event-location-form-card').length || (this.eventLocationsContainer.children ? this.eventLocationsContainer.children.length : 0);
-    this.badgeLocationCount.textContent = `${count} Acara`;
-  }
-
-  // ==================== OPERATIONAL BRIEFING PRESET (HARVY EXCEL DATA) ====================
-  classifyPackageLines(pkg) {
-    const splitClean = (str) => (str || '')
-      .replace(/\r/g, '')
-      .split('\n')
-      .map(s => s.trim())
-      .filter(s => s && s !== '-');
-
-    const attireItems = [];
-    const flowerItems = [];
-    const henaItems = [];
-    const decorItems = [];
-    const entertainmentItems = [];
-    const docItems = [];
-    const equipmentItems = [];
-
-    const addUnique = (arr, item) => {
-      const clean = item.replace(/^•\s*/, '').trim();
-      if (!clean) return;
-      const lower = clean.toLowerCase();
-      if (!arr.some(existing => existing.toLowerCase() === lower)) {
-        arr.push(clean);
-      }
-    };
-
-    const categorizeSingleLine = (line, sourceHint) => {
-      const l = line.toLowerCase();
-      // 1. Hena & Nail Art
-      if (l.includes('hena') || l.includes('henna') || l.includes('nail art')) {
-        addUnique(henaItems, line);
-        return;
-      }
-      // 2. Bunga / Melati / Buket
-      if (l.includes('melati') || l.includes('buket') || sourceHint === 'flowers') {
-        addUnique(flowerItems, line);
-        return;
-      }
-      // 3. Rias, Gaun, Gown, Kebaya, Jas, Busana
-      if (
-        l.includes('gaun') ||
-        l.includes('gown') ||
-        l.includes('kebaya') ||
-        l.includes('rias') ||
-        l.includes('make up') ||
-        l.includes('makeup') ||
-        l.includes('domas') ||
-        l.includes('penggapit') ||
-        l.includes('terima tamu') ||
-        l.includes('orang tua') ||
-        l.includes('besan') ||
-        sourceHint === 'makeup'
-      ) {
-        addUnique(attireItems, line);
-        return;
-      }
-      // 4. Dokumentasi (Foto, Video, Album, Frame, File, Flashdisk)
-      if (
-        l.includes('foto') ||
-        l.includes('video') ||
-        l.includes('liputan') ||
-        l.includes('cinematic') ||
-        l.includes('sinematik') ||
-        l.includes('flashdisk') ||
-        l.includes('semua file') ||
-        l.includes('album') ||
-        l.includes('20r') ||
-        l.includes('pigura') ||
-        l.includes('frame') ||
-        sourceHint === 'docs'
-      ) {
-        // Watch out: in Gresik/Lamongan/Luar Kota Excel sheets, 'MC' was placed in the docs column
-        if (l === 'mc' || l.startsWith('mc ') || l.includes('electone') || l.includes('dry smoke')) {
-          addUnique(entertainmentItems, line);
-        } else {
-          addUnique(docItems, line);
-        }
-        return;
-      }
-      // 5. Efek & Hiburan (MC, Electone, Dry Smoke)
-      if (
-        l === 'mc' ||
-        l.startsWith('mc ') ||
-        l.includes('electone') ||
-        l.includes('elekton') ||
-        l.includes('penyanyi') ||
-        l.includes('dry smoke') ||
-        l.includes('kembang api') ||
-        sourceHint === 'effects'
-      ) {
-        addUnique(entertainmentItems, line);
-        return;
-      }
-      // 6. Dekorasi
-      if (
-        sourceHint === 'decor' ||
-        l.includes('dekor') ||
-        l.includes('backdrop') ||
-        l.includes('pintu masuk') ||
-        l.includes('tumbang') ||
-        l.includes('welcome sign') ||
-        l.includes('lengkungan') ||
-        l.includes('panggung kaca') ||
-        l.includes('meja kursi akad')
-      ) {
-        addUnique(decorItems, line);
-        return;
-      }
-      // 7. Default to Perlengkapan / Equipment
-      addUnique(equipmentItems, line);
-    };
-
-    splitClean(pkg.makeup).forEach(line => categorizeSingleLine(line, 'makeup'));
-    splitClean(pkg.flowers).forEach(line => categorizeSingleLine(line, 'flowers'));
-    splitClean(pkg.decor).forEach(line => categorizeSingleLine(line, 'decor'));
-    splitClean(pkg.effects).forEach(line => categorizeSingleLine(line, 'effects'));
-    splitClean(pkg.docs || pkg.documentation).forEach(line => categorizeSingleLine(line, 'docs'));
-    splitClean(pkg.equipment).forEach(line => categorizeSingleLine(line, 'equipment'));
-    splitClean(pkg.otherItems).forEach(line => categorizeSingleLine(line, 'other'));
-
-    // Combine attire items if "Rias" and "Gown" are separate single-word lines (e.g. Prewedding)
-    const riasIdx = attireItems.findIndex(x => x.toLowerCase() === 'rias');
-    const gownIdx = attireItems.findIndex(x => x.toLowerCase() === 'gown');
-    if (riasIdx !== -1 && gownIdx !== -1) {
-      attireItems.splice(Math.max(riasIdx, gownIdx), 1);
-      attireItems[Math.min(riasIdx, gownIdx)] = 'Rias & Gown Pengantin (Sesi Prewedding Outdoor)';
-    }
-
-    // Merge "Rias manten + 2 gown" and "Bonus gaun akad" into one clear line if both exist
-    const rmIdx = attireItems.findIndex(x => x.toLowerCase() === 'rias manten + 2 gown');
-    const bonusIdx = attireItems.findIndex(x => x.toLowerCase() === 'bonus gaun akad');
-    if (rmIdx !== -1 && bonusIdx !== -1) {
-      attireItems.splice(bonusIdx, 1);
-      const targetIdx = attireItems.findIndex(x => x.toLowerCase() === 'rias manten + 2 gown');
-      if (targetIdx !== -1) {
-        attireItems[targetIdx] = 'Rias manten + 2 gown (bonus gaun akad)';
-      }
-    }
-
-    // Final deduplication pass on attireItems
-    const uniqueAttire = [];
-    attireItems.forEach(item => addUnique(uniqueAttire, item));
-
-    return {
-      attireItems: uniqueAttire,
-      flowerItems,
-      henaItems,
-      decorItems,
-      entertainmentItems,
-      docItems,
-      equipmentItems
-    };
-  }
-
-  applyOperationalPackageTemplate(pkgId) {
-    if (!pkgId) {
-      this.showToast('Silakan pilih salah satu paket Harvy dari dropdown.', 'warning');
-      return;
-    }
-    const pkg = (this.harvyPackages || HARVY_PACKAGES).find(p => p.id === pkgId);
-    if (!pkg) {
-      this.showToast('Data paket tidak ditemukan.', 'danger');
-      return;
-    }
-
-    const cleanPkgTitle = /^paket\b/i.test(pkg.name.trim()) ? pkg.name.trim() : `Paket ${pkg.name.trim()}`;
-    const areaSuffix = cleanPkgTitle.toLowerCase().includes((pkg.area || '').toLowerCase().replace(/^area\s+/i, '')) ? '' : ` (${pkg.area})`;
-    const classified = this.classifyPackageLines(pkg);
-
-    // 1. Build Rincian Rias, Gaun & Busana Pengantin (textareaAttireNotes)
-    const attireLines = [`${cleanPkgTitle}${areaSuffix} :`];
-
-    classified.attireItems.forEach(item => {
-      const lower = item.toLowerCase();
-      if (lower.includes('gaun') || lower.includes('gown') || lower.includes('kebaya')) {
-        attireLines.push(`• Busana & Rias: ${item}`);
-      } else {
-        attireLines.push(`• ${item}`);
-      }
-    });
-
-    // For Prewedding, also add theme info if notes mention 2 tema
-    if (pkg.name.toLowerCase().includes('prewed') && pkg.notes && pkg.notes.toLowerCase().includes('2 tema')) {
-      attireLines.push('• Tema Busana: 2 tema (Formal & Casual / baju sendiri)');
-    }
-
-    if (classified.flowerItems.length > 0) {
-      attireLines.push(`• Bunga & Melati: ${classified.flowerItems.join(', ')}`);
-    }
-    if (classified.henaItems.length > 0) {
-      attireLines.push(`• Henna & Art: ${classified.henaItems.join(', ')}`);
-    }
-
-    if (this.textareaAttireNotes) {
-      this.textareaAttireNotes.value = attireLines.join('\n');
-    }
-
-    // 2. Build Dekorasi, Dokumentasi, Hiburan & Logistik Paket (textareaLogisticsNotes)
-    const logisticsLines = [`Fasilitas ${cleanPkgTitle}${areaSuffix} :`];
-
-    if (classified.equipmentItems.length > 0) {
-      classified.equipmentItems.forEach(eq => logisticsLines.push(`• Perlengkapan: ${eq}`));
-    }
-    if (classified.decorItems.length > 0) {
-      logisticsLines.push(`• Dekorasi: ${classified.decorItems.join(', ')}`);
-    }
-    if (classified.entertainmentItems.length > 0) {
-      logisticsLines.push(`• Acara & Hiburan: ${classified.entertainmentItems.join(', ')}`);
-    }
-    if (classified.docItems.length > 0) {
-      logisticsLines.push(`• Dokumentasi: ${classified.docItems.join(', ')}`);
-    }
-
-    if (
-      classified.equipmentItems.length === 0 &&
-      classified.decorItems.length === 0 &&
-      classified.entertainmentItems.length === 0 &&
-      classified.docItems.length === 0
-    ) {
-      logisticsLines.push('• Paket khusus Rias & Busana (Tidak termasuk tenda, dekorasi, MC & dokumentasi)');
-      logisticsLines.push('• Gunakan menu "+ Tambah Logistik Satuan" di atas bila ada sewa perlengkapan tambahan');
-    }
-
-    if (this.textareaLogisticsNotes) {
-      this.textareaLogisticsNotes.value = logisticsLines.join('\n');
-    }
-
-    // 3. Build Keterangan & Ketentuan Paket (textareaSpecialNotes)
-    const specialLines = [];
-    if (pkg.notes) {
-      pkg.notes.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
-        specialLines.push(`• ${l}`);
-      });
-    }
-    if (pkg.extraCost) {
-      pkg.extraCost.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
-        specialLines.push(`• Opsional / Biaya Tambahan: ${l}`);
-      });
-    }
-    if (!pkg.name.toLowerCase().includes('prewed')) {
-      specialLines.push('• Konfirmasi ke admin bila ada acara tambahan (banjari, elekton, dll.)');
-    }
-    if (this.textareaSpecialNotes) {
-      this.textareaSpecialNotes.value = specialLines.join('\n');
-    }
-
-    this.showToast(`Rincian ${cleanPkgTitle} (${pkg.area}) berhasil diterapkan sesuai isi paket!`, 'success');
-  }
-
-  appendQuickRentalToLogistics() {
-    if (!this.selectQuickRentalAddon || !this.selectQuickRentalAddon.value) {
-      this.showToast('Pilih item sewa tambahan terlebih dahulu.', 'warning');
-      return;
-    }
-    const val = this.selectQuickRentalAddon.value;
-    let currentVal = this.textareaLogisticsNotes ? this.textareaLogisticsNotes.value.trim() : '';
-    if (currentVal) {
-      currentVal = currentVal
-        .split('\n')
-        .filter(line => !line.includes('Paket khusus Rias & Busana') && !line.includes('Gunakan menu "+ Tambah Logistik Satuan"'))
-        .join('\n')
-        .trim();
-    }
-    const lineToAdd = `• Tambahan: ${val}`;
-    if (this.textareaLogisticsNotes) {
-      this.textareaLogisticsNotes.value = currentVal ? `${currentVal}\n${lineToAdd}` : lineToAdd;
-    }
-    this.showToast(`Item "${val}" berhasil disisipkan ke daftar logistik!`, 'success');
-  }
-
-  // ==================== OPERATIONAL SECTION IN DETAIL ====================
-  renderOperationalSection(ev) {
-    if (!this.detailOperationalContent) return;
-    const cards = [];
-
-    const parents = [];
-    if (ev.fatherName) parents.push(`Bpk. ${ev.fatherName}`);
-    if (ev.motherName) parents.push(`Ibu ${ev.motherName}`);
-    const parentsStr = parents.join(' & ') || '-';
-    const clientPhone = ev.clientPhone || '-';
-    const cleanPhone = this.formatWhatsAppPhone(clientPhone);
-    const waClientLink = cleanPhone ? `https://wa.me/${cleanPhone}` : '';
-
-    cards.push(`
-      <div class="operational-box">
-        <div class="operational-box-header">
-          <div class="operational-box-title">
-            <span class="op-icon-chip">${UI_ICONS.couple}</span><span>MEMPELAI &amp; KONTAK KLIEN</span>
-          </div>
-          <span class="operational-tag-pill">Klien Inti</span>
-        </div>
-        <div class="operational-box-content">
-          <div><strong>Mempelai:</strong> ${this.escapeHtml(ev.coupleName || '-')}</div>
-          <div><strong>Orang Tua:</strong> ${this.escapeHtml(parentsStr)}</div>
-          <div><strong>Instagram:</strong> ${this.escapeHtml(ev.clientIg || '-')}</div>
-          <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
-            <strong>No. HP/WA:</strong> ${this.escapeHtml(clientPhone)}
-            ${waClientLink ? `<a href="${waClientLink}" target="_blank" rel="noopener noreferrer" class="badge-mini" style="background:#25D366; color:#FFF; text-decoration:none; font-weight:700;">Chat WA</a>` : ''}
-          </div>
-        </div>
-      </div>
-    `);
-
-    cards.push(`
-      <div class="operational-box">
-        <div class="operational-box-header">
-          <div class="operational-box-title">
-            <span class="op-icon-chip">${UI_ICONS.dress}</span><span>RIAS, GAUN &amp; BUSANA PENGANTIN</span>
-          </div>
-          <span class="operational-tag-pill">Rias &amp; Busana</span>
-        </div>
-        <div class="operational-box-content" style="white-space:pre-wrap;">${this.escapeHtml(ev.attireNotes || 'Urutan gaun belum diatur.')}</div>
-      </div>
-    `);
-
-    cards.push(`
-      <div class="operational-box">
-        <div class="operational-box-header">
-          <div class="operational-box-title">
-            <span class="op-icon-chip">${UI_ICONS.tent}</span><span>DEKORASI, DOKUMENTASI &amp; LOGISTIK PAKET</span>
-          </div>
-          <span class="operational-tag-pill">Fasilitas &amp; Logistik</span>
-        </div>
-        <div class="operational-box-content" style="white-space:pre-wrap;">${this.escapeHtml(ev.logisticsNotes || 'Logistik belum diatur.')}</div>
-      </div>
-    `);
-
-    const ketText = ev.specialNotes || ev.notes || '';
-    if (ketText) {
-      cards.push(`
-        <div class="operational-box">
-          <div class="operational-box-header">
-            <div class="operational-box-title">
-              <span class="op-icon-chip">${UI_ICONS.note}</span><span>KETERANGAN</span>
-            </div>
-            <span class="operational-tag-pill">Instruksi Khusus</span>
-          </div>
-          <div class="operational-box-content" style="white-space:pre-wrap;">${this.escapeHtml(ketText)}</div>
-        </div>
-      `);
-    }
-
-    this.detailOperationalContent.innerHTML = `<div class="operational-grid">${cards.join('')}</div>`;
-  }
-
-  // ==================== CREW & BRIEFING IN DETAIL VIEW ====================
-  renderCrewSection(ev) {
-    if (this.detailCrewCountBadge) {
-      const count = ev && ev.crew ? ev.crew.length : 0;
-      this.detailCrewCountBadge.innerHTML = `${UI_ICONS.users} <span>${count} Kru Bertugas</span>`;
-    }
-    if (!this.detailCrewList) return;
-    const crewMembers = ev.crew || [];
-
-    if (crewMembers.length === 0) {
-      this.detailCrewList.innerHTML = '';
-      if (this.crewEmptyState) this.crewEmptyState.classList.remove('hidden');
-      return;
-    }
-
-    if (this.crewEmptyState) this.crewEmptyState.classList.add('hidden');
-
-    this.detailCrewList.innerHTML = crewMembers.map((c) => {
-      const cleanPhone = this.formatWhatsAppPhone(c.phone);
-      const personalMsg = this.buildComprehensiveWAMessage(ev, c, false, this.shareEmojiMode);
-      const waSendUrl = cleanPhone
-        ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(personalMsg)}`
-        : '';
-
-      return `
-        <div class="crew-card-item">
-          <div class="crew-card-left">
-            <div class="crew-card-avatar">${this.escapeHtml((c.name || 'KR').substring(0, 2).toUpperCase())}</div>
-            <div class="crew-card-info">
-              <div class="crew-card-name">${this.escapeHtml(c.name)}</div>
-              <div class="crew-card-role">${this.escapeHtml(c.role)}</div>
-              ${c.phone ? `<div class="crew-card-contact">${UI_ICONS.phone} <span>${this.escapeHtml(c.phone)}</span></div>` : `<div class="crew-card-contact" style="color:var(--ink-faint); font-style:italic;">Tanpa nomor WA</div>`}
-              ${c.notes ? `<div class="crew-card-notes">${UI_ICONS.note} <span>${this.escapeHtml(c.notes)}</span></div>` : ''}
-            </div>
-          </div>
-          <div class="crew-card-actions">
-            ${waSendUrl ? `
-              <button type="button" class="btn btn-whatsapp btn-sm" onclick="window.app.sendCrewWhatsAppDirect('${c.id}')" title="Kirim briefing personal ke nomor kru ini via WhatsApp">
-                ${UI_ICONS.whatsapp} <span>Kirim WA</span>
-              </button>
-            ` : ''}
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.openCrewModal('edit', '${c.id}')" title="Edit data kru ini" style="padding: 5px 10px; font-size: 0.76rem;">
-              ${UI_ICONS.edit} <span>Edit</span></button>
-            <button type="button" class="btn-icon-danger" onclick="window.app.removeCrewFromEvent('${c.id}')" title="Hapus kru dari acara ini">
-              &times;
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  sendCrewWhatsAppDirect(crewId) {
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (!ev) return;
-    const crew = (ev.crew || []).find(c => c.id === crewId);
-    if (!crew) return;
-
-    const cleanPhone = this.formatWhatsAppPhone(crew.phone);
-    if (!cleanPhone) {
-      this.showToast('Nomor WhatsApp kru tidak valid.', 'warning');
-      return;
-    }
-
-    const text = this.buildComprehensiveWAMessage(ev, crew, false, this.shareEmojiMode);
-    this.copyToClipboard(text, `Membuka WhatsApp untuk ${crew.name}... Teks juga otomatis disalin!`);
-    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  }
-
-  removeCrewFromEvent(crewId) {
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (!ev) return;
-    ev.crew = (ev.crew || []).filter(c => c.id !== crewId);
-    this.saveEvents();
-    this.updateMetrics();
-    this.renderCrewSection(ev);
-    this.populateShareRecipients(ev);
-    this.generateShareSummary(ev);
-    this.showToast('Kru berhasil dihapus dari acara ini.', 'info');
-  }
-
-  // ==================== FAST CREW PICKER MODAL ====================
-  openSelectMasterModal() {
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    const masterIds = new Set(this.masterCrew.map(m => m.id));
-    this.selectedMasterCrewIds = new Set(
-      (ev?.crew || [])
-        .filter(c => masterIds.has(c.id))
-        .map(c => c.id)
-    );
-    if (this.inputSearchInMasterModal) this.inputSearchInMasterModal.value = '';
-    if (this.modalSelectMasterCrewBackdrop) {
-      this.modalSelectMasterCrewBackdrop.classList.add('active');
-      this.renderSelectMasterList();
-    }
-  }
-
-  closeSelectMasterModal() {
-    if (this.modalSelectMasterCrewBackdrop) {
-      this.modalSelectMasterCrewBackdrop.classList.remove('active');
-    }
-  }
-
-  updateSelectedMasterCountLabel() {
-    if (!this.labelSelectedMasterCount) return;
-    const count = this.selectedMasterCrewIds ? this.selectedMasterCrewIds.size : 0;
-    this.labelSelectedMasterCount.textContent = `${count} kru terpilih`;
-  }
-
-  renderSelectMasterList() {
-    if (!this.listSelectMasterCrew) return;
-    if (!this.selectedMasterCrewIds) {
-      const ev = this.events.find(x => x.id === this.currentEventId);
-      this.selectedMasterCrewIds = new Set((ev?.crew || []).map(c => c.id));
-    }
-    const query = this.inputSearchInMasterModal ? this.inputSearchInMasterModal.value.toLowerCase().trim() : '';
-
-    let list = this.masterCrew;
-    if (query) {
-      list = list.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.role.toLowerCase().includes(query) ||
-        (c.phone && c.phone.includes(query))
-      );
-    }
-
-    this.updateSelectedMasterCountLabel();
-
-    if (list.length === 0) {
-      this.listSelectMasterCrew.innerHTML = '<div style="padding:20px; text-align:center; color:var(--ink-secondary);">Tidak ada kru yang cocok.</div>';
-      return;
-    }
-
-    this.listSelectMasterCrew.innerHTML = list.map(c => {
-      const isChecked = this.selectedMasterCrewIds.has(c.id);
-      return `
-        <label class="select-crew-row" style="display:flex; align-items:center; gap:12px; padding:8px 12px; border-bottom:1px solid #E2E8F0; cursor:pointer;">
-          <input type="checkbox" class="check-master-crew" value="${c.id}" ${isChecked ? 'checked' : ''} style="width:18px; height:18px; accent-color:var(--gold-500);">
-          <div style="flex:1;">
-            <div style="font-weight:700; color:var(--ink-primary); font-size:0.9rem;">${this.escapeHtml(c.name)}</div>
-            <div style="font-size:0.78rem; color:var(--gold-dark); font-weight:600;">${this.escapeHtml(c.role)}</div>
-            ${c.phone ? `<div style="font-size:0.75rem; color:#64748B;">${UI_ICONS.phone} <span>${this.escapeHtml(c.phone)}</span></div>` : ''}
-          </div>
-        </label>
-      `;
-    }).join('');
-
-    this.listSelectMasterCrew.querySelectorAll('.check-master-crew').forEach(cb => {
-      cb.addEventListener('change', (e) => {
-        const id = e.target.value;
-        if (e.target.checked) {
-          this.selectedMasterCrewIds.add(id);
-        } else {
-          this.selectedMasterCrewIds.delete(id);
-        }
-        this.updateSelectedMasterCountLabel();
-      });
-    });
-  }
-
-  selectAllMasterModal(selectAll) {
-    if (!this.listSelectMasterCrew) return;
-    if (!this.selectedMasterCrewIds) this.selectedMasterCrewIds = new Set();
-    this.listSelectMasterCrew.querySelectorAll('.check-master-crew').forEach(cb => {
-      cb.checked = selectAll;
-      if (selectAll) {
-        this.selectedMasterCrewIds.add(cb.value);
-      } else {
-        this.selectedMasterCrewIds.delete(cb.value);
-      }
-    });
-    this.updateSelectedMasterCountLabel();
-  }
-
-  confirmAssignMasterCrew() {
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (!ev) return;
-
-    let selectedIds = this.selectedMasterCrewIds;
-    if (!selectedIds || selectedIds.size === 0) {
-      const checkedBoxes = this.listSelectMasterCrew ? this.listSelectMasterCrew.querySelectorAll('.check-master-crew:checked') : [];
-      selectedIds = new Set(Array.from(checkedBoxes).map(cb => cb.value));
-    }
-
-    // Retain custom non-master crew
-    const nonMasterCrew = (ev.crew || []).filter(c => !this.masterCrew.some(m => m.id === c.id));
-    const newlyAssigned = this.masterCrew.filter(m => selectedIds.has(m.id)).map(m => ({ ...m }));
-
-    ev.crew = [...newlyAssigned, ...nonMasterCrew];
-    this.saveEvents();
-    this.updateMetrics();
-    this.closeSelectMasterModal();
-    this.renderCrewSection(ev);
-    this.populateShareRecipients(ev);
-    this.generateShareSummary(ev);
-    this.showToast(`${newlyAssigned.length} kru dari Master Kru berhasil ditugaskan!`, 'success');
-  }
-
-  // ==================== CUSTOM CREW MODAL ====================
-  openCrewModal(mode = 'add', crewId = null) {
-    const presetRoles = ['Asisten', 'Perias', 'Fotografer', 'Sopir Logistik', 'MC'];
-    if (mode === 'edit' && crewId) {
-      const ev = this.events.find(x => x.id === this.currentEventId);
-      const crew = (ev?.crew || []).find(c => c.id === crewId);
-      if (!crew) return;
-
-      this.inputCrewId.value = crew.id;
-      this.modalCrewTitle.textContent = 'Edit Kru Bertugas';
-      this.inputCrewName.value = crew.name || '';
-      const roleVal = (crew.role || '').trim();
-      if (presetRoles.includes(roleVal)) {
-        this.selectCrewRole.value = roleVal;
-        if (this.boxCrewCustomRole) this.boxCrewCustomRole.classList.add('hidden');
-        if (this.inputCrewCustomRole) this.inputCrewCustomRole.value = '';
-      } else {
-        this.selectCrewRole.value = 'MANUAL';
-        if (this.boxCrewCustomRole) this.boxCrewCustomRole.classList.remove('hidden');
-        if (this.inputCrewCustomRole) this.inputCrewCustomRole.value = roleVal;
-      }
-      this.inputCrewPhone.value = crew.phone || '';
-      this.inputCrewEmail.value = crew.email || '';
-      if (this.textareaCrewNotes) this.textareaCrewNotes.value = crew.notes || '';
-    } else {
-      this.inputCrewId.value = '';
-      this.modalCrewTitle.textContent = 'Tambah Kru Bertugas';
-      this.formCrew.reset();
-      if (this.selectCrewRole) this.selectCrewRole.value = 'Asisten';
-      if (this.boxCrewCustomRole) this.boxCrewCustomRole.classList.add('hidden');
-      if (this.inputCrewCustomRole) this.inputCrewCustomRole.value = '';
-      if (this.textareaCrewNotes) this.textareaCrewNotes.value = '';
-    }
-
-    if (this.modalCrewBackdrop) this.modalCrewBackdrop.classList.add('active');
-  }
-
-  closeCrewModal() {
-    if (this.modalCrewBackdrop) this.modalCrewBackdrop.classList.remove('active');
-  }
-
-  handleCrewFormSubmit(e) {
-    e.preventDefault();
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (!ev) return;
-
-    const name = this.inputCrewName.value.trim();
-    if (!name) {
-      this.showToast('Nama kru wajib diisi!', 'warning');
-      return;
-    }
-
-    let finalRole = this.selectCrewRole ? this.selectCrewRole.value : 'Asisten';
-    if (finalRole === 'MANUAL') {
-      finalRole = this.inputCrewCustomRole ? this.inputCrewCustomRole.value.trim() : '';
-      if (!finalRole) {
-        this.showToast('Silakan ketik jabatan manual terlebih dahulu!', 'warning');
-        if (this.inputCrewCustomRole) this.inputCrewCustomRole.focus();
-        return;
-      }
-    }
-
-    const crewId = this.inputCrewId.value;
-    const isEdit = !!crewId;
-    const existingCrew = isEdit ? (ev.crew || []).find(c => c.id === crewId) : null;
-
-    const crewData = {
-      id: isEdit ? crewId : `crew-${Date.now()}`,
-      name,
-      role: finalRole || 'Asisten',
-      phone: this.inputCrewPhone ? this.inputCrewPhone.value.trim() : '',
-      email: this.inputCrewEmail ? this.inputCrewEmail.value.trim() : '',
-      notes: this.textareaCrewNotes ? this.textareaCrewNotes.value.trim() : (existingCrew?.notes || '')
-    };
-
-    if (!ev.crew) ev.crew = [];
-
-    if (isEdit) {
-      const idx = ev.crew.findIndex(c => c.id === crewId);
-      if (idx !== -1) ev.crew[idx] = crewData;
-    } else {
-      ev.crew.push(crewData);
-    }
-
-    if (this.chkSaveToMasterAlso && this.chkSaveToMasterAlso.checked) {
-      const masterIdx = this.masterCrew.findIndex(
-        m => m.id === crewData.id || (m.name || '').toLowerCase() === name.toLowerCase()
-      );
-      if (masterIdx !== -1) {
-        this.masterCrew[masterIdx] = {
-          ...this.masterCrew[masterIdx],
-          name: crewData.name,
-          role: crewData.role,
-          phone: crewData.phone,
-          email: crewData.email,
-          notes: crewData.notes
-        };
-      } else {
-        this.masterCrew.push({
-          id: `mc-${Date.now()}`,
-          name: crewData.name,
-          role: crewData.role,
-          phone: crewData.phone,
-          email: crewData.email,
-          notes: crewData.notes
-        });
-      }
-      this.saveMasterCrew();
-      if (this.navMasterCrewCount) this.navMasterCrewCount.textContent = this.masterCrew.length;
-    }
-
-    this.saveEvents();
-    this.updateMetrics();
-    this.closeCrewModal();
-    this.renderCrewSection(ev);
-    this.populateShareRecipients(ev);
-    this.generateShareSummary(ev);
-    this.showToast(isEdit ? 'Data kru diperbarui!' : 'Kru baru ditambahkan ke acara!', 'success');
-  }
-
-  // ==================== MASTER CREW DIRECTORY ====================
-  renderMasterCrewList() {
-    if (!this.masterCrewGridContainer) return;
-    const query = this.inputSearchMasterCrew ? this.inputSearchMasterCrew.value.toLowerCase().trim() : '';
-    const roleFilter = this.selectMasterRoleFilter ? this.selectMasterRoleFilter.value : 'ALL';
-
-    let list = this.masterCrew;
-
-    if (roleFilter !== 'ALL') {
-      const presetMap = {
-        'Asisten': ['asisten', 'runner'],
-        'Perias': ['perias', 'mua'],
-        'Fotografer': ['fotografer', 'foto'],
-        'Sopir Logistik': ['sopir', 'supir', 'logistik'],
-        'MC': ['mc', 'master of ceremony']
-      };
-      if (roleFilter === 'OTHER') {
-        const allPresetKeywords = Object.values(presetMap).flat();
-        list = list.filter(c => {
-          const r = (c.role || '').toLowerCase();
-          return !allPresetKeywords.some(k => r.includes(k));
-        });
-      } else if (presetMap[roleFilter]) {
-        const keywords = presetMap[roleFilter];
-        list = list.filter(c => {
-          const r = (c.role || '').toLowerCase();
-          return keywords.some(k => r.includes(k));
-        });
-      } else {
-        list = list.filter(c => (c.role || '').toLowerCase().includes(roleFilter.toLowerCase()));
-      }
-    }
-
-    if (query) {
-      list = list.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.role.toLowerCase().includes(query) ||
-        (c.phone && c.phone.includes(query)) ||
-        (c.notes && c.notes.toLowerCase().includes(query))
-      );
-    }
-
-    if (this.navMasterCrewCount) {
-      this.navMasterCrewCount.textContent = this.masterCrew.length;
-    }
-
-    if (list.length === 0) {
-      this.masterCrewGridContainer.innerHTML = '';
-      if (this.masterCrewEmptyState) this.masterCrewEmptyState.classList.remove('hidden');
-      return;
-    }
-
-    if (this.masterCrewEmptyState) this.masterCrewEmptyState.classList.add('hidden');
-
-    this.masterCrewGridContainer.innerHTML = list.map(c => `
-      <div class="master-crew-card">
-        <div class="mc-card-header">
-          <div class="mc-avatar">${this.escapeHtml(c.name.substring(0, 2).toUpperCase())}</div>
-          <div class="mc-title-group">
-            <div class="mc-name">${this.escapeHtml(c.name)}</div>
-            <div class="mc-role">${this.escapeHtml(c.role)}</div>
-          </div>
-        </div>
-        <div class="mc-card-body">
-          ${c.phone ? `<div class="mc-contact-item">${UI_ICONS.phone} <span>${this.escapeHtml(c.phone)}</span></div>` : ''}
-          ${c.email ? `<div class="mc-contact-item">${UI_ICONS.mail} <span>${this.escapeHtml(c.email)}</span></div>` : ''}
-          ${c.notes ? `<div class="mc-notes-item">${UI_ICONS.note} <span>${this.escapeHtml(c.notes)}</span></div>` : ''}
-        </div>
-        <div class="mc-card-footer" style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.openMasterCrewModal('${c.id}')">${UI_ICONS.edit} <span>Edit</span></button>
-          <button type="button" class="btn btn-ghost btn-sm" style="color:#DC2626;" onclick="window.app.deleteMasterCrew('${c.id}')">${UI_ICONS.trash} <span>Hapus</span></button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  openMasterCrewModal(crewId = null) {
-    const presetRoles = ['Asisten', 'Perias', 'Fotografer', 'Sopir Logistik', 'MC'];
-    if (crewId) {
-      const c = this.masterCrew.find(x => x.id === crewId);
-      if (!c) return;
-
-      this.inputMasterCrewId.value = c.id;
-      this.modalMasterCrewTitle.textContent = 'Edit Anggota Master Kru';
-      this.inputMasterCrewName.value = c.name || '';
-      const roleVal = (c.role || '').trim();
-      if (presetRoles.includes(roleVal)) {
-        this.selectMasterCrewRole.value = roleVal;
-        if (this.boxMasterCrewCustomRole) this.boxMasterCrewCustomRole.classList.add('hidden');
-        if (this.inputMasterCrewCustomRole) this.inputMasterCrewCustomRole.value = '';
-      } else {
-        this.selectMasterCrewRole.value = 'MANUAL';
-        if (this.boxMasterCrewCustomRole) this.boxMasterCrewCustomRole.classList.remove('hidden');
-        if (this.inputMasterCrewCustomRole) this.inputMasterCrewCustomRole.value = roleVal;
-      }
-      this.inputMasterCrewPhone.value = c.phone || '';
-      this.inputMasterCrewEmail.value = c.email || '';
-      if (this.textareaMasterCrewNotes) this.textareaMasterCrewNotes.value = c.notes || '';
-    } else {
-      this.inputMasterCrewId.value = '';
-      this.modalMasterCrewTitle.textContent = 'Tambah Anggota Master Kru';
-      this.formMasterCrew.reset();
-      if (this.selectMasterCrewRole) this.selectMasterCrewRole.value = 'Asisten';
-      if (this.boxMasterCrewCustomRole) this.boxMasterCrewCustomRole.classList.add('hidden');
-      if (this.inputMasterCrewCustomRole) this.inputMasterCrewCustomRole.value = '';
-    }
-
-    if (this.modalMasterCrewBackdrop) this.modalMasterCrewBackdrop.classList.add('active');
-  }
-
-  closeMasterCrewModal() {
-    if (this.modalMasterCrewBackdrop) this.modalMasterCrewBackdrop.classList.remove('active');
-  }
-
-  handleMasterCrewFormSubmit(e) {
-    e.preventDefault();
-    const name = this.inputMasterCrewName.value.trim();
-    if (!name) {
-      this.showToast('Nama kru wajib diisi!', 'warning');
-      return;
-    }
-
-    let finalRole = this.selectMasterCrewRole ? this.selectMasterCrewRole.value : 'Asisten';
-    if (finalRole === 'MANUAL') {
-      finalRole = this.inputMasterCrewCustomRole ? this.inputMasterCrewCustomRole.value.trim() : '';
-      if (!finalRole) {
-        this.showToast('Silakan ketik jabatan manual terlebih dahulu!', 'warning');
-        if (this.inputMasterCrewCustomRole) this.inputMasterCrewCustomRole.focus();
-        return;
-      }
-    }
-
-    const crewId = this.inputMasterCrewId.value;
-    const isEdit = !!crewId;
-
-    const crewData = {
-      id: isEdit ? crewId : `mc-${Date.now()}`,
-      name,
-      role: finalRole || 'Asisten',
-      phone: this.inputMasterCrewPhone ? this.inputMasterCrewPhone.value.trim() : '',
-      email: this.inputMasterCrewEmail ? this.inputMasterCrewEmail.value.trim() : '',
-      notes: this.textareaMasterCrewNotes ? this.textareaMasterCrewNotes.value.trim() : ''
-    };
-
-    if (isEdit) {
-      const idx = this.masterCrew.findIndex(c => c.id === crewId);
-      if (idx !== -1) this.masterCrew[idx] = crewData;
-    } else {
-      const existingMasterIdx = this.masterCrew.findIndex(c => (c.name || '').toLowerCase() === name.toLowerCase());
-      if (existingMasterIdx !== -1) {
-        crewData.id = this.masterCrew[existingMasterIdx].id;
-        this.masterCrew[existingMasterIdx] = crewData;
-      } else {
-        this.masterCrew.push(crewData);
-      }
-    }
-
-    // Sync updated master crew member into any events where they are assigned
-    if (Array.isArray(this.events)) {
-      let eventsUpdated = false;
-      this.events.forEach(ev => {
-        if (Array.isArray(ev.crew)) {
-          ev.crew.forEach(c => {
-            if (c.id === crewData.id || (c.name || '').toLowerCase() === crewData.name.toLowerCase()) {
-              c.name = crewData.name;
-              c.role = crewData.role;
-              c.phone = crewData.phone;
-              c.email = crewData.email;
-              c.notes = crewData.notes;
-              eventsUpdated = true;
-            }
-          });
-        }
-      });
-      if (eventsUpdated) this.saveEvents();
-    }
-
-    this.saveMasterCrew();
-    this.updateMetrics();
-    this.closeMasterCrewModal();
-    this.renderMasterCrewList();
-    this.showToast(isEdit ? 'Master kru diperbarui!' : 'Anggota master kru ditambahkan!', 'success');
-  }
-
-  deleteMasterCrew(crewId) {
-    if (confirm('Hapus anggota kru ini dari database master?')) {
-      this.masterCrew = this.masterCrew.filter(c => c.id !== crewId);
-      this.saveMasterCrew();
-      this.updateMetrics();
-      this.renderMasterCrewList();
-      this.showToast('Anggota kru dihapus dari master.', 'info');
-    }
-  }
-
-  // ==================== WHATSAPP BRIEFING GENERATOR ====================
-  populateShareRecipients(ev) {
-    if (!this.selectShareRecipient) return;
-    this.selectShareRecipient.innerHTML = '<option value="group">📢 Grup WhatsApp Kru (Pilih kontak manual di WA)</option>';
-
-    if (ev.crew && ev.crew.length > 0) {
-      ev.crew.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = `👤 ${c.name} (${c.role})`;
-        this.selectShareRecipient.appendChild(opt);
-      });
-    }
-  }
-
-  handleShareRecipientChange() {
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (ev) this.generateShareSummary(ev);
-  }
-
-  setShareEmojiMode(useEmojis) {
-    this.shareEmojiMode = useEmojis;
-    if (this.btnFormatClean) this.btnFormatClean.classList.toggle('active', !useEmojis);
-    if (this.btnFormatEmoji) this.btnFormatEmoji.classList.toggle('active', useEmojis);
-
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (ev) this.generateShareSummary(ev);
-  }
-
-  generateShareSummary(ev) {
-    if (!this.textareaSharePreview) return;
-    const recipient = this.selectShareRecipient ? this.selectShareRecipient.value : 'group';
-    let crew = null;
-    let isGroup = true;
-
-    if (recipient !== 'group') {
-      crew = (ev.crew || []).find(c => c.id === recipient);
-      isGroup = false;
-    }
-
-    const text = this.buildComprehensiveWAMessage(ev, crew, isGroup, this.shareEmojiMode);
-    this.textareaSharePreview.value = text;
-  }
-
-  copyShareContent() {
-    if (!this.textareaSharePreview) return;
-    const text = this.textareaSharePreview.value;
-    this.copyToClipboard(text, 'Teks rekap briefing berhasil disalin ke Clipboard!');
-  }
-
-  openDirectWhatsAppShare() {
-    const ev = this.events.find(x => x.id === this.currentEventId);
-    if (!ev) return;
-
-    const recipient = this.selectShareRecipient ? this.selectShareRecipient.value : 'group';
-    let text = '';
-    let phone = '';
-
-    if (recipient === 'group') {
-      text = this.buildComprehensiveWAMessage(ev, null, true, this.shareEmojiMode);
-    } else {
-      const crew = (ev.crew || []).find(c => c.id === recipient);
-      if (crew) {
-        text = this.buildComprehensiveWAMessage(ev, crew, false, this.shareEmojiMode);
-        phone = this.formatWhatsAppPhone(crew.phone);
-      }
-    }
-
-    this.copyToClipboard(text, 'Membuka WhatsApp... Teks juga otomatis disalin ke Clipboard!');
-
-    let waUrl = '';
-    if (phone) {
-      waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
-    } else {
-      waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    }
-
-    window.open(waUrl, '_blank');
-  }
-
-  buildComprehensiveWAMessage(ev, crew = null, isGroup = false, useEmojis = false) {
-    const formattedDate = this.formatDateIndonesian(ev.date);
-    const locations = this.getEventLocations(ev);
-
-    // Emoji icons or empty string if clean text mode is chosen
-    const E_PIN    = useEmojis ? '\u{1F4CD}' : '';
-    const E_CAL    = useEmojis ? '\u{1F4C5}' : '';
-    const E_SPARK  = useEmojis ? '\u{2728}'  : '';
-    const E_CAM    = useEmojis ? '\u{1F4F8}' : '';
-    const E_USERS  = useEmojis ? '\u{1F465}' : '';
-    const E_PHONE  = useEmojis ? '\u{1F4F1}' : '';
-    const E_CLOCK  = useEmojis ? '\u{23F0}'  : '';
-    const E_DRESS  = useEmojis ? '\u{1F457}' : '';
-    const E_TENT   = useEmojis ? '\u{1F3AA}' : '';
-    const E_TARGET = useEmojis ? '\u{1F3AF}' : '';
-    const E_HAND   = useEmojis ? '\u{1F449}' : '•';
-    const E_NOTE   = useEmojis ? '\u{1F4DD}' : '';
-    const E_CALL   = useEmojis ? '\u{1F4DE}' : '';
-    const E_WAVE   = useEmojis ? '\u{1F44B}' : '';
-    const E_BULLET = '•';
-
-    const pfx = (emoji) => emoji ? emoji + ' ' : '';
-
-    // Header Lokasi: 📍*LOKASI 1* *RESEPSI*
-    const locationHeaderLines = locations.map((loc, i) => {
-      const locStr = (loc.locName || `Lokasi ${i + 1}`).trim().toUpperCase();
-      const eventStr = (loc.eventName || loc.label || loc.name || 'Resepsi').trim().toUpperCase();
-      const pinPrefix = useEmojis ? '\u{1F4CD}' : '';
-      return `${pinPrefix}*${locStr}* *${eventStr}*`;
-    }).join('\n');
-
-    // Single Google Maps Link per location
-    let locationDetails = locations.map((loc, idx) => {
-      const num = idx + 1;
-      const locTitleStr = (loc.locName || `Lokasi ${num}`).trim().toUpperCase();
-      const eventTitleStr = (loc.eventName || loc.label || loc.name || 'Resepsi').trim().toUpperCase();
-      
-      // Jika hanya 1 lokasi, header sub-lokasi tidak perlu diulang karena sudah tampil jelas di header atas
-      let headerLine = '';
-      if (locations.length > 1) {
-        headerLine = `*${locTitleStr} : ${eventTitleStr}*\n`;
-      }
-
-      const venueName = (loc.venueName && loc.venueName !== '-') ? loc.venueName.trim() : (loc.venueType ? loc.venueType.trim() : (loc.name ? loc.name.trim() : '-'));
-      const venueAddress = loc.venueAddress ? loc.venueAddress.trim() : '-';
-      let timeStr = loc.time ? loc.time.trim() : (loc.startTime ? `${loc.startTime} WIB - ${loc.endTime || 'Selesai'}` : '-');
-
-      const mapQueryParts = [];
-      if (venueName && venueName !== '-') mapQueryParts.push(venueName);
-      if (loc.venueAddress) mapQueryParts.push(loc.venueAddress.trim());
-      const query = mapQueryParts.join(', ') || 'Gresik';
-
-      const openMapsUrl = loc.mapsUrl || loc.customMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-
-      return `${headerLine}${E_BULLET} Waktu: ${timeStr}
-${E_BULLET} Tempat: ${venueName}
-${E_BULLET} Alamat: ${venueAddress}${loc.notes ? `\n${E_BULLET} Keterangan: ${loc.notes.trim()}` : ''}
-${E_BULLET} Google Maps: ${openMapsUrl}`;
-    }).join('\n\n');
-
-    const primaryAdmin = this.getPrimaryAdmin();
-    const cleanAdminPhone = this.formatWhatsAppPhone(primaryAdmin.phone);
-    const brandName = this.brandConfig ? this.brandConfig.fullName : 'Mahligai Wedding Organizer';
-
-    // Client and Parents Info
-    let clientInfo = [];
-    if (ev.coupleName) clientInfo.push(`${pfx(E_SPARK)}*MEMPELAI :* ${ev.coupleName}`);
-    if (ev.clientIg) clientInfo.push(`${pfx(E_CAM)}*IG MANTEN:* ${ev.clientIg}`);
-    if (ev.fatherName || ev.motherName) {
-      const parents = [];
-      if (ev.fatherName) parents.push(`Bpk. ${ev.fatherName}`);
-      if (ev.motherName) parents.push(`Ibu ${ev.motherName}`);
-      clientInfo.push(`${pfx(E_USERS)}*ORANG TUA:* ${parents.join(' & ')}`);
-    }
-    if (ev.clientPhone) clientInfo.push(`${pfx(E_PHONE)}*NO. HP/WA:* ${ev.clientPhone}`);
-
-    // Operational Sections (VENDOR UTAMA tidak ditampilkan karena sudah ada di TIM KRU BERTUGAS)
-    let operationalSections = [];
-
-
-    if (ev.attireNotes) {
-      operationalSections.push(`----------------------------------------\n${pfx(E_DRESS)}*URUTAN GAUN & BUSANA:*\n${ev.attireNotes}`);
-    }
-
-    if (ev.logisticsNotes) {
-      operationalSections.push(`----------------------------------------\n${pfx(E_TENT)}*LOGISTIK & PAKET FASILITAS:*\n${ev.logisticsNotes}`);
-    }
-
-    let crewSection = '';
-    if (isGroup) {
-      if (ev.crew && ev.crew.length > 0) {
-        crewSection = `----------------------------------------\n${pfx(E_USERS)}*TIM KRU BERTUGAS:*\n` +
-          ev.crew.map((c, i) => `${i + 1}. ${c.name} - ${c.role} (${c.phone || 'Tanpa no'})`).join('\n');
-      }
-    } else if (crew) {
-      crewSection = `----------------------------------------\n${pfx(E_TARGET)}*TUGAS ANDA (${crew.name}):*\n${E_HAND} *${crew.role}*\n` +
-        (crew.notes ? `Catatan Khusus: ${crew.notes}` : '');
-    }
-
-        let specialNotesSection = '';
-    const ketText = ev.specialNotes || ev.notes || '';
-    if (ketText) {
-      specialNotesSection = `----------------------------------------\n${pfx(E_NOTE)}*KETERANGAN:*\n${ketText}`;
-    }
-
-    let greeting = isGroup
-      ? `*BRIEFING ACARA PERNIKAHAN*\n*${brandName.toUpperCase()}*\n----------------------------------------\n${locationHeaderLines}\n\n${pfx(E_CAL)}*TANGGAL:* ${formattedDate}\n\n${clientInfo.join('\n')}`
-      : `Halo Kak ${crew ? crew.name : ''}${E_WAVE ? ' ' + E_WAVE : ''}\nBerikut surat tugas & briefing acara:\n\n*BRIEFING ACARA PERNIKAHAN*\n*${brandName.toUpperCase()}*\n----------------------------------------\n${locationHeaderLines}\n\n${pfx(E_CAL)}*TANGGAL:* ${formattedDate}\n\n${clientInfo.join('\n')}`;
-
-    let body = [
-      greeting,
-      `----------------------------------------\n${pfx(E_PIN)}*JADWAL & LOKASI ACARA:*\n${locationDetails}`,
-      ...operationalSections,
-      crewSection,
-      specialNotesSection,
-      `----------------------------------------\n${pfx(E_CALL)}*NARAHUBUNG ADMIN WO:*\n${primaryAdmin.name} (${primaryAdmin.phone || 'Belum diatur'})\nChat WA: https://wa.me/${cleanAdminPhone}\n— Tim ${brandName}.`
-    ].filter(Boolean).join('\n\n');
-
-    return body;
-  }
-
-  render() {
-    this.renderEventList();
-    this.updateMetrics();
-  }
-
-  updateMetrics() {
-    const upcoming = this.events.filter(e => !e.isArchived && this.calculateCountdown(e.date).daysDiff >= 0);
-    const h3 = upcoming.filter(e => {
-      const diff = this.calculateCountdown(e.date).daysDiff;
-      return diff >= 0 && diff <= 3;
-    });
-    const archived = this.events.filter(e => e.isArchived || this.calculateCountdown(e.date).daysDiff < 0);
-
-    if (this.metricUpcoming) this.metricUpcoming.textContent = upcoming.length;
-    if (this.metricH3Count) this.metricH3Count.textContent = h3.length;
-
-    if (this.countUpcoming) this.countUpcoming.textContent = upcoming.length;
-    if (this.countH3) this.countH3.textContent = h3.length;
-    if (this.countArchived) this.countArchived.textContent = archived.length;
-    if (this.countAll) this.countAll.textContent = this.events.length;
-
-    let activeCrewSet = new Set();
-    upcoming.forEach(e => {
-      (e.crew || []).forEach(c => activeCrewSet.add(c.id || c.name));
-    });
-    if (this.metricActiveCrewCount) this.metricActiveCrewCount.textContent = activeCrewSet.size;
-    if (this.metricMasterCrewTotal) this.metricMasterCrewTotal.textContent = this.masterCrew.length;
-    if (this.navMasterCrewCount) this.navMasterCrewCount.textContent = this.masterCrew.length;
-
-    if (upcoming.length > 0 && this.metricClosestEvent) {
-      const sortedUpcoming = [...upcoming].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const closest = sortedUpcoming[0];
-      const diff = this.calculateCountdown(closest.date).daysDiff;
-      this.metricClosestEvent.textContent = `Terdekat: ${closest.coupleName} (H-${diff})`;
-    } else if (this.metricClosestEvent) {
-      this.metricClosestEvent.textContent = 'Terdekat: -';
-    }
-  }
-
-  renderEventList() {
-    if (!this.eventsGridContainer) return;
-
-    const query = this.inputSearchEvents ? this.inputSearchEvents.value.toLowerCase().trim() : '';
-    let filtered = [...this.events];
-
-    if (this.activeFilter === 'upcoming') {
-      filtered = filtered.filter(e => !e.isArchived && this.calculateCountdown(e.date).daysDiff >= 0);
-    } else if (this.activeFilter === 'h3') {
-      filtered = filtered.filter(e => {
-        if (e.isArchived) return false;
-        const diff = this.calculateCountdown(e.date).daysDiff;
-        return diff >= 0 && diff <= 3;
-      });
-    } else if (this.activeFilter === 'archived') {
-      filtered = filtered.filter(e => e.isArchived || this.calculateCountdown(e.date).daysDiff < 0);
-    }
-
-    if (query) {
-      filtered = filtered.filter(e =>
-        e.coupleName.toLowerCase().includes(query) ||
-        (e.packageName && e.packageName.toLowerCase().includes(query)) ||
-        (e.locations && e.locations.some(l => (l.venueName && l.venueName.toLowerCase().includes(query)) || (l.venueAddress && l.venueAddress.toLowerCase().includes(query))))
-      );
-    }
-
-    // Sort: upcoming by date asc, archived by date desc
-    filtered.sort((a, b) => {
-      if (this.activeFilter === 'archived') return new Date(b.date) - new Date(a.date);
-      return new Date(a.date) - new Date(b.date);
-    });
-
-    if (this.archiveActionBanner) {
-      if (this.activeFilter === 'archived' && filtered.length > 0) {
-        this.archiveActionBanner.classList.remove('hidden');
-      } else {
-        this.archiveActionBanner.classList.add('hidden');
-      }
-    }
-
-    if (filtered.length === 0) {
-      this.eventsGridContainer.innerHTML = '';
-      if (this.eventsEmptyState) this.eventsEmptyState.classList.remove('hidden');
-      return;
-    }
-
-    if (this.eventsEmptyState) this.eventsEmptyState.classList.add('hidden');
-
-    this.eventsGridContainer.innerHTML = filtered.map(ev => {
-      const countdown = this.calculateCountdown(ev.date);
-      const locations = this.getEventLocations(ev);
-      const locSummary = locations[0] ? locations[0].venueName || locations[0].venueAddress || 'Kediaman Mempelai' : '-';
-      const crewCount = ev.crew ? ev.crew.length : 0;
-      return `
-        <div class="event-card" onclick="window.app.switchToDetail('${ev.id}')">
-          <div class="event-card-header">
-            <span class="countdown-badge ${countdown.badgeClass}">${countdown.badgeText}</span>
-          </div>
-          <div class="event-card-body">
-            <h3 class="event-couple-name">${this.escapeHtml(ev.coupleName)}</h3>
-            <div class="event-date-row">
-              <span class="event-date-icon">${UI_ICONS.calendar}</span>
-              <span>${this.formatDateIndonesian(ev.date)}</span>
-            </div>
-            <div class="event-location-row">
-              <span class="event-loc-icon">${UI_ICONS.mapPin}</span>
-              <span class="truncate-1">${this.escapeHtml(locSummary)}</span>
-            </div>
-          </div>
-          <div class="event-card-clean-footer">
-            <div class="card-footer-tags">
-              <span class="card-crew-count-pill">${UI_ICONS.users} <span>${crewCount} Kru Bertugas</span></span>
-              <span class="card-loc-count-pill">${UI_ICONS.mapPin} <span>${locations.length} Lokasi</span></span>
-            </div>
-            <span class="card-open-link">Buka Detail &amp; WA →</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // ==================== ARCHIVE CLEANUP ====================
-  clearAllArchivedEvents() {
-    if (confirm('Hapus SEMUA acara di arsip secara permanen?')) {
-      this.events = this.events.filter(x => !x.isArchived && this.calculateCountdown(x.date).daysDiff >= 0);
-      this.saveEvents();
-      this.showToast('Semua arsip berhasil dibersihkan!', 'success');
-      this.render();
-    }
-  }
-
-  // ==================== UTILITIES ====================
-  copyToClipboard(text, successMessage) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
-        this.showToast(successMessage, 'success');
-      }).catch(() => {
-        this.fallbackCopy(text, successMessage);
-      });
-    } else {
-      this.fallbackCopy(text, successMessage);
-    }
-  }
-
-  fallbackCopy(text, successMessage) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      this.showToast(successMessage, 'success');
-    } catch (err) {
-      this.showToast('Gagal menyalin teks.', 'error');
-    }
-    document.body.removeChild(textArea);
-  }
-
-  showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-item toast-${type}`;
-    let icon = 'ℹ️';
-    if (type === 'success') icon = '✅';
-    if (type === 'warning') icon = '⚠️';
-    if (type === 'error') icon = '❌';
-
-    toast.innerHTML = `
-      <span class="toast-icon">${icon}</span>
-      <span class="toast-message">${this.escapeHtml(message)}</span>
-    `;
-
-    container.appendChild(toast);
-    setTimeout(() => {
-      toast.classList.add('fade-out');
-      setTimeout(() => toast.remove(), 300);
-    }, 3500);
-  }
-
-  // ==================== BRANDING & OWNER PANEL ====================
-  getBrandLogoMarkup(cfg, sizePx = 22) {
-    const c = cfg || this.brandConfig || getDefaultBrandConfig();
-    if (c.logoType === 'image' && c.logoValue) {
-      return `<img src="${c.logoValue}" alt="Logo" class="brand-custom-img" style="width:100%; height:100%; object-fit:contain; border-radius:inherit;">`;
-    }
-    const val = c.logoValue || 'svg-rings';
-    if (BRAND_LOGO_SVGS[val]) {
-      return BRAND_LOGO_SVGS[val].replace(/width="24" height="24"/, `width="${sizePx}" height="${sizePx}"`);
-    }
-    if (val === 'heart') {
-      return BRAND_LOGO_SVGS['svg-heart'].replace(/width="24" height="24"/, `width="${sizePx}" height="${sizePx}"`);
-    }
-    const emojiToSvgMap = {
-      '👑': 'svg-crown',
-      '💍': 'svg-rings',
-      '💐': 'svg-floral',
-      '🏰': 'svg-castle',
-      '❤️': 'svg-heart',
-      '🕊️': 'svg-dove',
-      '✨': 'svg-sparkle',
-      '💖': 'svg-heart'
-    };
-    if (emojiToSvgMap[val] && BRAND_LOGO_SVGS[emojiToSvgMap[val]]) {
-      return BRAND_LOGO_SVGS[emojiToSvgMap[val]].replace(/width="24" height="24"/, `width="${sizePx}" height="${sizePx}"`);
-    }
-    return BRAND_LOGO_SVGS['svg-rings'].replace(/width="24" height="24"/, `width="${sizePx}" height="${sizePx}"`);
-  }
-
-  applyBrandSettings() {
-    const cfg = this.brandConfig || getDefaultBrandConfig();
-    const titleEl = document.getElementById('headerBrandTitle');
-    const subEl = document.getElementById('headerBrandSubtitle');
-    const iconEl = document.getElementById('headerBrandIcon');
-
-    if (titleEl) titleEl.textContent = cfg.shortName || cfg.fullName;
-    if (subEl) subEl.textContent = cfg.tagline || 'Wedding Organizer Management';
-
-    if (iconEl) {
-      iconEl.innerHTML = this.getBrandLogoMarkup(cfg, 22);
-    }
-  }
-
-  loadBrandFormValues() {
-    const cfg = this.brandConfig || getDefaultBrandConfig();
-    if (this.inputBrandFullName) this.inputBrandFullName.value = cfg.fullName || '';
-    if (this.inputBrandShortName) this.inputBrandShortName.value = cfg.shortName || '';
-    if (this.inputBrandTagline) this.inputBrandTagline.value = cfg.tagline || '';
-    this.updateBrandLivePreview();
-  }
-
-  updateBrandLivePreview() {
-    const cfg = this.brandConfig || getDefaultBrandConfig();
-    if (this.previewBrandTitle) this.previewBrandTitle.textContent = (this.inputBrandShortName ? this.inputBrandShortName.value : '') || cfg.shortName;
-    if (this.previewBrandSubtitle) this.previewBrandSubtitle.textContent = (this.inputBrandTagline ? this.inputBrandTagline.value : '') || cfg.tagline;
-
-    const previewIconEl = document.getElementById('previewBrandIcon');
-    if (previewIconEl) {
-      previewIconEl.innerHTML = this.getBrandLogoMarkup(cfg, 22);
-    }
-
-    const boxUploadPreview = document.getElementById('boxLogoUploadPreview');
-    if (boxUploadPreview) {
-      boxUploadPreview.innerHTML = this.getBrandLogoMarkup(cfg, 30);
-    }
-
-    const activeKey = cfg.logoType === 'image' ? '' : (cfg.logoValue || 'svg-rings');
-    document.querySelectorAll('.quick-icon-btn').forEach(btn => {
-      const btnKey = btn.getAttribute('data-icon');
-      btn.classList.toggle('active', btnKey === activeKey);
-    });
-  }
-
-  handleSaveBrandConfig(e) {
-    e.preventDefault();
-    this.brandConfig.fullName = this.inputBrandFullName.value.trim() || 'Mahligai Wedding Organizer';
-    this.brandConfig.shortName = this.inputBrandShortName.value.trim() || 'Mahligai WO';
-    this.brandConfig.tagline = this.inputBrandTagline.value.trim() || 'Wedding Organizer Management';
-    this.saveBrandConfig(this.brandConfig);
-    this.applyBrandSettings();
-    this.updateBrandLivePreview();
-    if (this.currentEventId) {
-      const ev = this.events.find(x => x.id === this.currentEventId);
-      if (ev) this.generateShareSummary(ev);
-    }
-    this.showToast('Identitas & logo brand berhasil disimpan!', 'success');
-  }
-
-  renderUserAccessHeader() {
-    // Header admin pill was replaced by #btnOpenOwnerPanel ("Pengaturan Admin")
-  }
-
-  openOwnerAdminModal(defaultPanel = 'panelBrandingSettings') {
-    if (this.modalOwnerAdminBackdrop) {
-      this.modalOwnerAdminBackdrop.classList.add('active');
-      this.switchOwnerTab(defaultPanel);
-      this.loadBrandFormValues();
-      this.renderOwnerAdminList();
-    }
-  }
-
-  closeOwnerAdminModal() {
-    if (this.modalOwnerAdminBackdrop) {
-      this.modalOwnerAdminBackdrop.classList.remove('active');
-    }
-    this.closeAdminForm();
-  }
-
-  switchOwnerTab(panelId) {
-    this.activeOwnerTab = panelId || 'panelBrandingSettings';
-    const tabConfigs = [
-      { id: 'panelBrandingSettings', btnId: 'tabBtnBrandingSettings', anchorId: 'anchorBranding' },
-      { id: 'panelAdminSettings', btnId: 'tabBtnAdminSettings', anchorId: 'anchorAdmin' },
-      { id: 'panelSecuritySettings', btnId: 'tabBtnSecuritySettings', anchorId: 'anchorSecurity' },
-      { id: 'panelExcelSettings', btnId: 'tabBtnExcelSettings', anchorId: 'anchorExcel' }
-    ];
-
-    tabConfigs.forEach(item => {
-      const btn = document.getElementById(item.btnId);
-      const panel = document.getElementById(item.id);
-      const anchor = document.getElementById(item.anchorId);
-      const isActive = item.id === this.activeOwnerTab;
-
-      if (btn) btn.classList.toggle('active', isActive);
-      if (panel) panel.classList.toggle('hidden', !isActive);
-      if (anchor) anchor.classList.toggle('hidden', !isActive);
-    });
-
-    if (this.activeOwnerTab === 'panelExcelSettings') {
-      this.renderExcelDatabaseStats();
-    }
-
-    const modalBody = document.querySelector('.admin-modal-body');
-    if (modalBody) modalBody.scrollTop = 0;
-  }
-
-  renderOwnerAdminList() {
-    const highlightBox = document.getElementById('adminActiveHighlightBox');
-    const cardsList = document.getElementById('ownerAdminCardsList');
-    const primaryAdmin = this.getPrimaryAdmin();
-
-    if (highlightBox && primaryAdmin) {
-      const cleanPhone = (primaryAdmin.phone || '').replace(/[^0-9]/g, '');
-      const waLink = cleanPhone.startsWith('62') 
-        ? `https://wa.me/${cleanPhone}` 
-        : cleanPhone.startsWith('0') 
-          ? `https://wa.me/62${cleanPhone.slice(1)}` 
-          : `https://wa.me/${cleanPhone}`;
-
-      highlightBox.innerHTML = `
-        <div class="admin-highlight-header">
-          <span class="admin-highlight-tag">⭐ ADMIN 1 (UTAMA) / NARAHUBUNG RESMI WO</span>
-          <span class="admin-highlight-status"><span class="status-dot"></span> Aktif</span>
-        </div>
-        <div class="admin-highlight-body">
-          <div class="admin-highlight-avatar">${BRAND_LOGO_SVGS['svg-crown']}</div>
-          <div class="admin-highlight-details">
-            <div class="admin-highlight-name">${this.escapeHtml(primaryAdmin.name)}</div>
-            <div class="admin-highlight-contacts">
-              <div class="contact-line">
-                <span class="contact-label">📱 WhatsApp:</span>
-                <span class="contact-value" style="font-weight:700;">${this.escapeHtml(primaryAdmin.phone)}</span>
-              </div>
-              ${primaryAdmin.email ? `
-                <div class="contact-line">
-                  <span class="contact-label">✉️ Email:</span>
-                  <span class="contact-value email-value">${this.escapeHtml(primaryAdmin.email)}</span>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-        <div class="admin-highlight-action" style="display:flex; gap:8px;">
-          <a href="${waLink}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-sm" style="flex:1; justify-content:center; text-decoration:none; min-height:38px; font-weight:700;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"></path>
-            </svg>
-            <span>Tes Chat WhatsApp</span>
-          </a>
-          <button type="button" class="btn btn-secondary btn-sm btn-edit-admin" data-id="${primaryAdmin.id}" style="min-height:38px;">
-            ${UI_ICONS.edit} <span>Edit Admin</span>
-          </button>
-        </div>
-      `;
-    }
-
-    if (cardsList) {
-      if (!this.adminList || this.adminList.length === 0) {
-        cardsList.innerHTML = `<div style="text-align:center; padding:16px; color:#64748B;">Belum ada admin terdaftar.</div>`;
-        return;
-      }
-
-      cardsList.innerHTML = this.adminList.map((a, idx) => {
-        const isPrim = !!a.isPrimary;
-        const cleanP = (a.phone || '').replace(/[^0-9]/g, '');
-        const waUrl = cleanP.startsWith('62') ? `https://wa.me/${cleanP}` : cleanP.startsWith('0') ? `https://wa.me/62${cleanP.slice(1)}` : `https://wa.me/${cleanP}`;
-
-        return `
-          <div class="admin-card-item ${isPrim ? 'is-primary' : ''}">
-            <div class="admin-card-header">
-              <div class="admin-idx-badge ${isPrim ? 'is-primary' : ''}">${isPrim ? '★' : (idx + 1)}</div>
-              <div class="admin-card-identity">
-                <div class="admin-card-title-row">
-                  <span class="admin-card-name">${this.escapeHtml(a.name)}</span>
-                  ${isPrim ? '<span class="badge-admin-primary">👑 Admin Utama</span>' : '<span class="badge-admin-secondary">Admin Tambahan</span>'}
-                </div>
-                <div class="admin-card-contacts">
-                  <div class="admin-card-contact-item">
-                    <span class="icon">📱</span>
-                    <span>${this.escapeHtml(a.phone)}</span>
-                  </div>
-                  ${a.email ? `
-                    <div class="admin-card-contact-item">
-                      <span class="icon">✉️</span>
-                      <span class="email-text">${this.escapeHtml(a.email)}</span>
-                    </div>
-                  ` : ''}
-                </div>
-              </div>
-            </div>
-
-            <div class="admin-card-actions">
-              ${!isPrim ? `
-                <button type="button" class="btn btn-ghost btn-sm btn-set-primary-admin" data-id="${a.id}" style="font-size:0.78rem; color:#92400E; font-weight:700;">
-                  ${UI_ICONS.star} <span>Jadikan Utama</span>
-                </button>
-              ` : `
-                <span class="badge-admin-selected">⭐ Aktif Sebagai Admin 1</span>
-              `}
-              <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Chat WhatsApp" style="text-decoration:none; padding:4px 8px; font-size:0.78rem;">
-                ${UI_ICONS.whatsapp} <span>WA</span></a>
-              <button type="button" class="btn btn-secondary btn-sm btn-edit-admin" data-id="${a.id}" style="padding:4px 10px; font-size:0.78rem;">
-                ${UI_ICONS.edit} <span>Edit</span></button>
-              ${this.adminList.length > 1 ? `
-                <button type="button" class="btn-danger-icon btn-delete-admin" data-id="${a.id}" title="Hapus Admin">${UI_ICONS.trash}</button>
-              ` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-  }
-
-  openAdminFormForAdd() {
-    if (!this.adminFormCard) return;
-    this.adminFormCard.classList.remove('hidden');
-    const formTitle = document.getElementById('formAdminTitle');
-    if (formTitle) formTitle.textContent = 'Tambah Admin Baru';
-
-    if (this.inputAdminId) this.inputAdminId.value = '';
-    if (this.inputAdminName) this.inputAdminName.value = '';
-    if (this.inputAdminPhone) this.inputAdminPhone.value = '';
-    if (this.inputAdminEmail) this.inputAdminEmail.value = '';
-    if (this.checkIsPrimaryAdmin) this.checkIsPrimaryAdmin.checked = (this.adminList.length === 0);
-
-    if (this.inputAdminName) this.inputAdminName.focus();
-    this.adminFormCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  openAdminFormForEdit(adminId) {
-    const admin = this.adminList.find(a => a.id === adminId);
-    if (!admin || !this.adminFormCard) return;
-
-    this.adminFormCard.classList.remove('hidden');
-    const formTitle = document.getElementById('formAdminTitle');
-    if (formTitle) formTitle.textContent = `Edit Admin: ${admin.name}`;
-
-    if (this.inputAdminId) this.inputAdminId.value = admin.id;
-    if (this.inputAdminName) this.inputAdminName.value = admin.name || '';
-    if (this.inputAdminPhone) this.inputAdminPhone.value = admin.phone || '';
-    if (this.inputAdminEmail) this.inputAdminEmail.value = admin.email || '';
-    if (this.checkIsPrimaryAdmin) this.checkIsPrimaryAdmin.checked = !!admin.isPrimary;
-
-    if (this.inputAdminName) this.inputAdminName.focus();
-    this.adminFormCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  closeAdminForm() {
-    if (!this.adminFormCard) return;
-    this.adminFormCard.classList.add('hidden');
-    if (this.inputAdminId) this.inputAdminId.value = '';
-    if (this.inputAdminName) this.inputAdminName.value = '';
-    if (this.inputAdminPhone) this.inputAdminPhone.value = '';
-    if (this.inputAdminEmail) this.inputAdminEmail.value = '';
-    if (this.checkIsPrimaryAdmin) this.checkIsPrimaryAdmin.checked = false;
-  }
-
-  handleSaveAdminSubmit(e) {
-    e.preventDefault();
-    const id = this.inputAdminId ? this.inputAdminId.value.trim() : '';
-    const name = this.inputAdminName ? this.inputAdminName.value.trim() : '';
-    const phone = this.inputAdminPhone ? this.inputAdminPhone.value.trim() : '';
-    const email = this.inputAdminEmail ? this.inputAdminEmail.value.trim() : '';
-    const isPrimary = this.checkIsPrimaryAdmin ? this.checkIsPrimaryAdmin.checked : false;
-
-    if (!name || !phone) {
-      this.showToast('Nama dan nomor WhatsApp admin wajib diisi.', 'warning');
-      return;
-    }
-
-    if (id) {
-      const admin = this.adminList.find(a => a.id === id);
-      if (admin) {
-        admin.name = name;
-        admin.phone = phone;
-        admin.email = email;
-        if (isPrimary) {
-          this.adminList.forEach(a => a.isPrimary = false);
-          admin.isPrimary = true;
-        }
-      }
-    } else {
-      const newAdmin = {
-        id: 'adm-' + Date.now(),
-        name,
-        phone,
-        email,
-        isPrimary: isPrimary || this.adminList.length === 0
-      };
-      if (newAdmin.isPrimary) {
-        this.adminList.forEach(a => a.isPrimary = false);
-      }
-      this.adminList.push(newAdmin);
-    }
-
-    if (!this.adminList.some(a => a.isPrimary) && this.adminList.length > 0) {
-      this.adminList[0].isPrimary = true;
-    }
-
-    this.saveAdminList();
-    this.renderUserAccessHeader();
-    this.renderOwnerAdminList();
-    if (this.currentEventId) {
-      const ev = this.events.find(x => x.id === this.currentEventId);
-      if (ev) this.generateShareSummary(ev);
-    }
-    this.closeAdminForm();
-    this.showToast('Data admin berhasil disimpan!', 'success');
-  }
-
-  setPrimaryAdmin(adminId) {
-    const admin = this.adminList.find(a => a.id === adminId);
-    if (!admin) return;
-
-    this.adminList.forEach(a => a.isPrimary = (a.id === adminId));
-    this.saveAdminList();
-    this.renderUserAccessHeader();
-    this.renderOwnerAdminList();
-    if (this.currentEventId) {
-      const ev = this.events.find(x => x.id === this.currentEventId);
-      if (ev) this.generateShareSummary(ev);
-    }
-    this.showToast(`Admin Utama diubah ke ${admin.name}`, 'success');
-  }
-
-  deleteAdmin(adminId) {
-    if (this.adminList.length <= 1) {
-      this.showToast('Minimal harus ada 1 admin terdaftar.', 'warning');
-      return;
-    }
-
-    const admin = this.adminList.find(a => a.id === adminId);
-    if (!admin) return;
-
-    if (!confirm(`Hapus admin ${admin.name}?`)) return;
-
-    const wasPrimary = admin.isPrimary;
-    this.adminList = this.adminList.filter(a => a.id !== adminId);
-
-    if (wasPrimary && this.adminList.length > 0) {
-      this.adminList[0].isPrimary = true;
-    }
-
-    this.saveAdminList();
-    this.renderUserAccessHeader();
-    this.renderOwnerAdminList();
-    if (this.currentEventId) {
-      const ev = this.events.find(x => x.id === this.currentEventId);
-      if (ev) this.generateShareSummary(ev);
-    }
-    this.showToast(`Admin ${admin.name} berhasil dihapus.`, 'info');
-  }
-
-  handleExportDataBackup() {
-    const eventsToBackup = this.events || [];
-    const backupData = {
-      exportDate: new Date().toISOString(),
-      type: 'mahligai_events_backup',
-      version: 'v20.4',
-      totalEvents: eventsToBackup.length,
-      events: eventsToBackup
-    };
-
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mahligai-daftar-acara-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    this.showToast(`✅ Cadangan ${eventsToBackup.length} daftar acara berhasil diunduh!`, 'success');
-  }
-
-  handleImportDataBackup(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = JSON.parse(evt.target.result);
-        if (!data || typeof data !== 'object') {
-          throw new Error('Format JSON tidak valid');
-        }
-
-        let importedEvents = null;
-        if (Array.isArray(data.events)) {
-          importedEvents = data.events;
-        } else if (Array.isArray(data)) {
-          importedEvents = data;
-        }
-
-        if (!importedEvents) {
-          throw new Error('Berkas tidak berisi daftar acara pernikahan yang valid.');
-        }
-
-        // Fokus murni memulihkan daftar acara saja, setelan admin/brand/kru/katalog tetap aman
-        this.events = importedEvents;
-        this.saveEvents();
-        this.render();
-
-        this.showToast(`✅ Berhasil memulihkan ${importedEvents.length} data acara pernikahan!`, 'success');
-      } catch (err) {
-        console.error('Import error:', err);
-        this.showToast(`Gagal memulihkan cadangan: ${err.message || 'File cadangan tidak valid atau rusak'}`, 'danger');
-      } finally {
-        e.target.value = '';
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  handleFactoryReset() {
-    if (confirm('PERINGATAN: Seluruh data acara, kru, dan admin akan direset ke data awal resmi Mahligai WO. Lanjutkan?')) {
-      localStorage.clear();
-      this.events = getInitialEvents();
-      this.masterCrew = getInitialMasterCrew();
-      this.adminList = getInitialAdminList();
-      this.brandConfig = getDefaultBrandConfig();
-
-      this.saveEvents();
-      this.saveMasterCrew();
-      this.saveAdminList();
-      this.saveBrandConfig(this.brandConfig);
-
-      this.applyBrandSettings();
-      this.renderUserAccessHeader();
-      this.renderOwnerAdminList();
-      this.loadBrandFormValues();
-      this.render();
-      this.showToast('Aplikasi berhasil direset ke setelan awal Mahligai WO!', 'success');
-      this.closeOwnerAdminModal();
-    }
-  }
-
-  initPwaInstall() {
-    let deferredPrompt = null;
-    const btnPwa = document.getElementById('btnPwaInstall');
-
-    // Detect if already running as installed standalone PWA
-    const isStandalone =
-      (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) ||
-      window.navigator.standalone === true;
-
-    if (isStandalone && btnPwa) {
-      btnPwa.style.display = 'none';
-    }
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      if (btnPwa) btnPwa.style.display = 'inline-flex';
-    });
-
-    window.addEventListener('appinstalled', () => {
-      deferredPrompt = null;
-      if (btnPwa) btnPwa.style.display = 'none';
-      this.showToast('Aplikasi Mahligai WO berhasil terpasang dan siap digunakan 100% Offline!', 'success');
-    });
-
-    window.addEventListener('offline', () => {
-      this.showToast('Mode Offline PWA Aktif — Aplikasi tetap berjalan penuh tanpa koneksi internet.', 'info');
-    });
-
-    window.addEventListener('online', () => {
-      this.showToast('Koneksi internet terhubung kembali.', 'success');
-    });
-
-    if (btnPwa) {
-      btnPwa.addEventListener('click', () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then(() => {
-            deferredPrompt = null;
-          });
-        } else {
-          const modal = document.getElementById('iosInstallModal');
-          if (modal) modal.classList.add('active');
-        }
-      });
-    }
-
-    const btnGotIt = document.getElementById('btnGotItIosInstall');
-    if (btnGotIt) {
-      btnGotIt.addEventListener('click', () => {
-        const modal = document.getElementById('iosInstallModal');
-        if (modal) modal.classList.remove('active');
-      });
-    }
-  }
-
-  // ==================== NOTIFICATIONS H-3 ====================
-  checkH3Notifications() {
-    const upcoming = this.events.filter(e => !e.isArchived && this.calculateCountdown(e.date).daysDiff >= 0);
-    const h3List = upcoming.filter(e => {
-      const diff = this.calculateCountdown(e.date).daysDiff;
-      return diff >= 0 && diff <= 3;
-    });
-
-    if (this.headerNotificationCount) {
-      if (h3List.length > 0) {
-        this.headerNotificationCount.textContent = h3List.length;
-        this.headerNotificationCount.classList.remove('hidden');
-      } else {
-        this.headerNotificationCount.classList.add('hidden');
-      }
-    }
-
-    if (this.h3UrgentBanner) {
-      if (h3List.length > 0) {
-        this.h3UrgentBanner.classList.remove('hidden');
-        const h3Title = document.getElementById('h3BannerTitle');
-        if (h3Title) h3Title.textContent = `Perhatian Admin: Ada ${h3List.length} Acara Pernikahan H-3!`;
-      } else {
-        this.h3UrgentBanner.classList.add('hidden');
-      }
-    }
-
-    if (this.notificationDropdownList) {
-      if (h3List.length === 0) {
-        this.notificationDropdownList.innerHTML = '<div style="padding:14px; text-align:center; color:var(--ink-secondary); font-size:0.85rem;">Tidak ada acara mendekati H-3.</div>';
-      } else {
-        this.notificationDropdownList.innerHTML = h3List.map(ev => {
-          const diff = this.calculateCountdown(ev.date).daysDiff;
-          return `
-            <div style="padding:10px 14px; border-bottom:1px solid #F1F5F9; cursor:pointer;" onclick="window.app.switchToDetail('${ev.id}')">
-              <div style="font-weight:700; color:var(--ink-primary); font-size:0.88rem;">${ev.coupleName}</div>
-              <div style="font-size:0.78rem; color:#D97706; font-weight:700;">H-${diff} Hari (${this.formatDateIndonesian(ev.date)})</div>
-            </div>
-          `;
-        }).join('');
-      }
-    }
-  }
-
-  dismissH3Banner() {
-    if (this.h3UrgentBanner) this.h3UrgentBanner.classList.add('hidden');
-  }
-
-  requestWebNotification() {
-    if ('Notification' in window) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          this.showToast('Notifikasi desktop aktif!', 'success');
-          new Notification('Mahligai Wedding Organizer', {
-            body: 'Sistem pengingat acara H-3 siap memantau jadwal pernikahan.',
-            icon: 'icons/icon-192.png'
-          });
-        } else {
-          this.showToast('Izin notifikasi tidak diberikan.', 'warning');
-        }
-      });
-    }
-  }
-
-  // ==================== HELPERS ====================
-  calculateCountdown(dateString) {
-    if (!dateString) return { daysDiff: -999, badgeText: '-', badgeClass: 'expired' };
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const target = new Date(dateString);
-    target.setHours(0, 0, 0, 0);
-
-    const diffTime = target.getTime() - today.getTime();
-    const daysDiff = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-    if (daysDiff < 0) {
-      return { daysDiff, badgeText: `Lewat ${Math.abs(daysDiff)} Hari`, badgeClass: 'expired' };
-    } else if (daysDiff === 0) {
-      return { daysDiff, badgeText: 'HARI H (H-0)', badgeClass: 'h0' };
-    } else if (daysDiff === 1) {
-      return { daysDiff, badgeText: 'BESOK (H-1)', badgeClass: 'urgent' };
-    } else if (daysDiff <= 3) {
-      return { daysDiff, badgeText: `MENDESAK (H-${daysDiff})`, badgeClass: 'urgent' };
-    } else if (daysDiff <= 7) {
-      return { daysDiff, badgeText: `H-${daysDiff} Hari`, badgeClass: 'soon' };
-    } else {
-      return { daysDiff, badgeText: `H-${daysDiff} Hari`, badgeClass: 'normal' };
-    }
-  }
-
-  formatDateIndonesian(dateString) {
-    if (!dateString) return '-';
-    try {
-      const d = new Date(dateString + 'T00:00:00');
-      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-      return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-    } catch (e) {
-      return dateString;
-    }
-  }
-
-  formatWhatsAppPhone(phone) {
-    if (!phone) return '';
-    let digits = phone.replace(/[^0-9]/g, '');
-    if (digits.startsWith('0')) digits = '62' + digits.substring(1);
-    if (!digits.startsWith('62') && digits.length >= 9) digits = '62' + digits;
-    return digits;
-  }
-
-
-  // ==================== HARVY EXCEL DATABASE MANAGEMENT ====================
-  loadHarvyDatabase() {
-    try {
-      const customPkgs = localStorage.getItem(this.STORAGE_KEY_HARVY_PACKAGES);
-      if (customPkgs) {
-        const parsed = JSON.parse(customPkgs);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.harvyPackages = parsed.map(p => {
-            if (typeof this.classifyPackageLines === 'function') {
-              const c = this.classifyPackageLines(p);
-              return {
-                ...p,
-                decor: c.decorItems.join('\n'),
-                effects: [...c.entertainmentItems, ...c.henaItems].join('\n'),
-                docs: c.docItems.join('\n'),
-                makeup: c.attireItems.join('\n'),
-                flowers: c.flowerItems.join('\n'),
-                equipment: c.equipmentItems.join('\n'),
-                otherItems: ''
-              };
-            }
-            return p;
-          });
-        } else {
-          this.harvyPackages = HARVY_PACKAGES;
-        }
-      } else {
-        this.harvyPackages = HARVY_PACKAGES;
-      }
-    } catch (e) {
-      this.harvyPackages = HARVY_PACKAGES;
-    }
-
-    try {
-      const customRentals = localStorage.getItem(this.STORAGE_KEY_HARVY_RENTALS);
-      if (customRentals) {
-        const parsed = JSON.parse(customRentals);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.harvyRentals = parsed;
-        } else {
-          this.harvyRentals = HARVY_RENTALS;
-        }
-      } else {
-        this.harvyRentals = HARVY_RENTALS;
-      }
-    } catch (e) {
-      this.harvyRentals = HARVY_RENTALS;
-    }
-
-    // Keep global HARVY_CATALOG in sync
-    HARVY_CATALOG.packages = this.harvyPackages;
-    HARVY_CATALOG.rentals = this.harvyRentals;
-  }
-
-  renderOperationalPackageDropdowns() {
-    // 1. Render selectOperationalPackageTemplate
-    if (this.selectOperationalPackageTemplate) {
-      const prevVal = this.selectOperationalPackageTemplate.value;
-      const pkgs = this.harvyPackages || HARVY_PACKAGES;
-
-      const areas = {};
-      pkgs.forEach(p => {
-        const a = p.area || 'Lainnya';
-        if (!areas[a]) areas[a] = [];
-        areas[a].push(p);
-      });
-
-      let html = '<option value="">-- Pilih Paket Harvy untuk Auto-Fill Briefing --</option>';
-      for (const areaName of Object.keys(areas)) {
-        html += `<optgroup label="📍 ${areaName.toUpperCase()}">`;
-        areas[areaName].forEach(p => {
-          const priceFmt = (p.price || 0).toLocaleString('id-ID');
-          const descShort = p.desc ? ` - ${p.desc}` : '';
-          html += `<option value="${p.id}">${p.name} (Rp ${priceFmt})${descShort}</option>`;
-        });
-        html += '</optgroup>';
-      }
-      this.selectOperationalPackageTemplate.innerHTML = html;
-      if (prevVal) this.selectOperationalPackageTemplate.value = prevVal;
-    }
-
-    // 2. Render selectQuickRentalAddon
-    if (this.selectQuickRentalAddon) {
-      const prevRentalVal = this.selectQuickRentalAddon.value;
-      const rentals = this.harvyRentals || HARVY_RENTALS;
-
-      const cats = {};
-      rentals.forEach(r => {
-        const c = r.category || 'Sewa Perlengkapan';
-        if (!cats[c]) cats[c] = [];
-        cats[c].push(r);
-      });
-
-      let html = '<option value="">-- Pilih Item Sewa Tambahan --</option>';
-      for (const catName of Object.keys(cats)) {
-        html += `<optgroup label="🏷️ ${catName.toUpperCase()}">`;
-        cats[catName].forEach(r => {
-          const priceFmt = (r.price || 0).toLocaleString('id-ID');
-          const unitStr = r.unit && r.unit !== 'unit' ? ` / ${r.unit}` : '';
-          const optVal = `${r.name} (${r.category}) - Rp ${priceFmt}${unitStr}`;
-          html += `<option value="${optVal}">${r.name} (+Rp ${priceFmt}${unitStr})</option>`;
-        });
-        html += '</optgroup>';
-      }
-      this.selectQuickRentalAddon.innerHTML = html;
-      if (prevRentalVal) this.selectQuickRentalAddon.value = prevRentalVal;
-    }
-  }
-
-  renderExcelDatabaseStats() {
-    const pkgs = this.harvyPackages || HARVY_PACKAGES;
-    const rentals = this.harvyRentals || HARVY_RENTALS;
-
-    if (this.statExcelPackageCount) this.statExcelPackageCount.textContent = `${pkgs.length} Paket`;
-    if (this.statExcelPackageAreas) {
-      const distinctAreas = new Set(pkgs.map(p => (p.area || '').toLowerCase().replace(/^area\s+/i, '').trim()).filter(Boolean));
-      this.statExcelPackageAreas.textContent = `${distinctAreas.size} Wilayah Operasional`;
-    }
-    if (this.statExcelRentalCount) this.statExcelRentalCount.textContent = `${rentals.length} Item`;
-
-    let meta = null;
-    try {
-      const metaRaw = localStorage.getItem(this.STORAGE_KEY_HARVY_SYNC_META);
-      if (metaRaw) meta = JSON.parse(metaRaw);
-    } catch (e) {}
-
-    const isCustom = localStorage.getItem(this.STORAGE_KEY_HARVY_PACKAGES) !== null;
-
-    if (this.statExcelDbSource) {
-      this.statExcelDbSource.textContent = isCustom ? 'Excel Kustom Admin' : 'Bawaan Harvy Wedding';
-      if (this.statExcelDbSource.style) this.statExcelDbSource.style.color = isCustom ? 'var(--gold-dark)' : '#166534';
-    }
-    if (this.statExcelDbLastSync) {
-      if (meta && meta.lastUpdated) {
-        this.statExcelDbLastSync.textContent = `Tersinkron: ${meta.lastUpdated} (${meta.fileName || 'Excel'})`;
-      } else {
-        this.statExcelDbLastSync.textContent = 'Versi Resmi Excel Standar';
-      }
-    }
-    if (this.badgeExcelDbStatus) {
-      this.badgeExcelDbStatus.innerHTML = isCustom
-        ? '⚡ Database Kustom Sinkron'
-        : '🟢 Database Standar Aktif';
-    }
-
-    // Update live item counts on .excel-tab-btn
-    const normalizeArea = (a) => (a || '').toLowerCase().replace(/^area\s+/i, '').trim();
-    const tabLabels = {
-      'Area Sekitar': `🌸 Area Sekitar (${pkgs.filter(p => normalizeArea(p.area) === 'sekitar').length})`,
-      'Area Gresik': `🏵️ Gresik (${pkgs.filter(p => normalizeArea(p.area) === 'gresik').length})`,
-      'Area Lamongan': `🍃 Lamongan (${pkgs.filter(p => normalizeArea(p.area) === 'lamongan').length})`,
-      'Area Luar Kota': `✨ Luar Kota (${pkgs.filter(p => normalizeArea(p.area) === 'luar kota').length})`,
-      'Perlengkapan': `🎪 Perlengkapan (${rentals.length})`
-    };
-    document.querySelectorAll('.excel-tab-btn').forEach(btn => {
-      const areaKey = btn.getAttribute('data-excel-area');
-      if (areaKey && tabLabels[areaKey]) {
-        btn.textContent = tabLabels[areaKey];
-      }
-    });
-
-    this.renderExcelPreviewTable(this.activeExcelPreviewArea || 'Area Sekitar');
-  }
-
-  async handleExcelDatabaseUpload(file) {
-    if (!file) return;
-
-    try {
-      this.showToast(`Memproses sinkronisasi berkas "${file.name}"...`, 'info');
-
-      const fileNameLower = file.name.toLowerCase();
-      let extracted = null;
-
-      if (fileNameLower.endsWith('.json') || (file.type && file.type.includes('json'))) {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        if (json.packages && Array.isArray(json.packages)) {
-          extracted = { packages: json.packages, rentals: json.rentals || [] };
-        } else if (Array.isArray(json)) {
-          extracted = { packages: json, rentals: [] };
-        }
-      } else {
-        const arrayBuf = await file.arrayBuffer();
-        const wb = await this.parseXlsxBuffer(arrayBuf);
-        extracted = this.extractHarvyDataFromWorkbook(wb);
-      }
-
-      if (!extracted || (!extracted.packages.length && !extracted.rentals.length)) {
-        throw new Error('Tidak ada data paket pengantin atau daftar sewa yang dapat diekstrak dari berkas ini. Pastikan berkas menggunakan template standar Harvy Wedding (.xlsx).');
-      }
-
-      if (extracted.packages.length > 0) {
-        this.harvyPackages = extracted.packages;
-        localStorage.setItem(this.STORAGE_KEY_HARVY_PACKAGES, JSON.stringify(this.harvyPackages));
-      }
-      if (extracted.rentals.length > 0) {
-        this.harvyRentals = extracted.rentals;
-        localStorage.setItem(this.STORAGE_KEY_HARVY_RENTALS, JSON.stringify(this.harvyRentals));
-      }
-
-      HARVY_CATALOG.packages = this.harvyPackages;
-      HARVY_CATALOG.rentals = this.harvyRentals;
-
-      const now = new Date();
-      const meta = {
-        lastUpdated: now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' +
-                     now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-        fileName: file.name,
-        packageCount: this.harvyPackages.length,
-        rentalCount: this.harvyRentals.length,
-        source: 'Excel Import'
-      };
-      localStorage.setItem(this.STORAGE_KEY_HARVY_SYNC_META, JSON.stringify(meta));
-
-      this.renderOperationalPackageDropdowns();
-      this.renderExcelDatabaseStats();
-
-      this.showToast(`✅ Sinkronisasi sukses! ${this.harvyPackages.length} Paket & ${this.harvyRentals.length} Item Logistik kini aktif.`, 'success');
-    } catch (err) {
-      console.error('Excel sync error:', err);
-      this.showToast(`Gagal sinkronisasi: ${err.message || 'Format berkas tidak dikenali'}`, 'danger');
-    }
-  }
-
-  handleResetExcelDatabase() {
-    if (confirm('Kembalikan database paket & logistik ke data standar Harvy Wedding bawaan? Seluruh perubahan kustom dari file Excel akan dihapus.')) {
-      localStorage.removeItem(this.STORAGE_KEY_HARVY_PACKAGES);
-      localStorage.removeItem(this.STORAGE_KEY_HARVY_RENTALS);
-      localStorage.removeItem(this.STORAGE_KEY_HARVY_SYNC_META);
-
-      this.harvyPackages = HARVY_PACKAGES;
-      this.harvyRentals = HARVY_RENTALS;
-      HARVY_CATALOG.packages = this.harvyPackages;
-      HARVY_CATALOG.rentals = this.harvyRentals;
-
-      this.renderOperationalPackageDropdowns();
-      this.renderExcelDatabaseStats();
-
-      this.showToast('🔄 Database paket & logistik berhasil dikembalikan ke standar bawaan Harvy.', 'info');
-    }
-  }
-
-  // ==================== PURE JS XLSX PARSER ====================
-  async parseXlsxBuffer(buffer) {
-    if (typeof DecompressionStream === 'undefined') {
-      throw new Error('Browser Anda tidak mendukung dekompresi data Excel secara langsung. Silakan gunakan peramban Google Chrome, Microsoft Edge, atau Safari versi terbaru.');
-    }
-
-    // Normalisasi input agar mendukung ArrayBuffer murni (dari file.arrayBuffer()), Uint8Array, maupun Node Buffer
-    let u8;
-    if (buffer instanceof ArrayBuffer) {
-      u8 = new Uint8Array(buffer);
-    } else if (ArrayBuffer.isView(buffer)) {
-      u8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-    } else {
-      u8 = new Uint8Array(buffer);
-    }
-
-    const rawBuffer = u8.buffer;
-    const baseOffset = u8.byteOffset;
-    const totalLength = u8.byteLength;
-
-    if (totalLength < 22) {
-      throw new Error('Ukuran berkas terlalu kecil untuk berkas Excel (.xlsx) yang valid.');
-    }
-
-    const view = new DataView(rawBuffer, baseOffset, totalLength);
-
-    // 1. Locate End of Central Directory Record (0x06054b50)
-    let eocdOffset = -1;
-    for (let i = totalLength - 22; i >= 0; i--) {
-      if (view.getUint32(i, true) === 0x06054b50) {
-        eocdOffset = i;
-        break;
-      }
-    }
-    if (eocdOffset === -1) {
-      throw new Error('Format berkas bukan file Excel (.xlsx / zip) yang valid.');
-    }
-
-    const cdOffset = view.getUint32(eocdOffset + 16, true);
-    const cdCount = view.getUint16(eocdOffset + 10, true);
-
-    const entries = {};
-    let curr = cdOffset;
-    for (let k = 0; k < cdCount; k++) {
-      if (curr + 46 > totalLength) break;
-      if (view.getUint32(curr, true) !== 0x02014b50) break;
-
-      const compression = view.getUint16(curr + 10, true);
-      const compSize = view.getUint32(curr + 20, true);
-      const fnLen = view.getUint16(curr + 28, true);
-      const extraLen = view.getUint16(curr + 30, true);
-      const commentLen = view.getUint16(curr + 32, true);
-      const localHeaderOffset = view.getUint32(curr + 42, true);
-
-      const fileNameBytes = new Uint8Array(rawBuffer, baseOffset + curr + 46, fnLen);
-      const fileName = new TextDecoder('utf-8').decode(fileNameBytes);
-
-      if (localHeaderOffset + 30 <= totalLength) {
-        const localView = new DataView(rawBuffer, baseOffset + localHeaderOffset);
-        if (localView.getUint32(0, true) === 0x04034b50) {
-          const localFnLen = localView.getUint16(26, true);
-          const localExtraLen = localView.getUint16(28, true);
-          const dataOffset = localHeaderOffset + 30 + localFnLen + localExtraLen;
-
-          if (dataOffset + compSize <= totalLength) {
-            const compressedData = new Uint8Array(rawBuffer, baseOffset + dataOffset, compSize);
-
-            let fileContent = '';
-            if (compression === 0) {
-              fileContent = new TextDecoder('utf-8').decode(compressedData);
-            } else if (compression === 8) {
-              try {
-                const ds = new DecompressionStream('deflate-raw');
-                const writer = ds.writable.getWriter();
-                writer.write(compressedData);
-                writer.close();
-                const reader = ds.readable.getReader();
-                const chunks = [];
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  chunks.push(value);
-                }
-                const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
-                const full = new Uint8Array(totalLen);
-                let pos = 0;
-                for (const c of chunks) {
-                  full.set(c, pos);
-                  pos += c.length;
-                }
-                fileContent = new TextDecoder('utf-8').decode(full);
-              } catch (decompErr) {
-                console.warn('Gagal dekompresi entri zip:', fileName, decompErr);
-              }
-            }
-            entries[fileName] = fileContent;
-          }
-        }
-      }
-      curr += 46 + fnLen + extraLen + commentLen;
-    }
-
-    // 2. Parse Shared Strings (xl/sharedStrings.xml)
-    const sharedStrings = [];
-    const sstXml = entries['xl/sharedStrings.xml'];
-    if (sstXml) {
-      const siRegex = /<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/gi;
-      let mSi;
-      while ((mSi = siRegex.exec(sstXml)) !== null) {
-        const siBody = mSi[1];
-        const tRegex = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/gi;
-        let mT;
-        let text = '';
-        while ((mT = tRegex.exec(siBody)) !== null) {
-          text += mT[1];
-        }
-        text = text
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&apos;/g, "'")
-          .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d, 10)))
-          .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
-        sharedStrings.push(text);
-      }
-    }
-
-    // 3. Map sheet relationship IDs (xl/_rels/workbook.xml.rels)
-    const relsXml = entries['xl/_rels/workbook.xml.rels'];
-    const relMap = {};
-    if (relsXml) {
-      const relRegex = /<Relationship(?:\s+([^>]*?))?\/?>/gi;
-      let mRel;
-      while ((mRel = relRegex.exec(relsXml)) !== null) {
-        const attrs = mRel[1] || '';
-        const idMatch = /Id="([^"]+)"/.exec(attrs);
-        const targetMatch = /Target="([^"]+)"/.exec(attrs);
-        if (idMatch && targetMatch) {
-          let target = targetMatch[1];
-          if (!target.startsWith('xl/')) {
-            target = 'xl/' + target.replace(/^\/?/, '');
-          }
-          relMap[idMatch[1]] = target;
-        }
-      }
-    }
-
-    // 4. Map sheets from xl/workbook.xml
-    const wbXml = entries['xl/workbook.xml'];
-    const sheets = [];
-    if (wbXml) {
-      const sheetRegex = /<sheet(?:\s+([^>]*?))?\/?>/gi;
-      let mSheet;
-      while ((mSheet = sheetRegex.exec(wbXml)) !== null) {
-        const attrs = mSheet[1] || '';
-        const nameMatch = /name="([^"]+)"/.exec(attrs);
-        const idMatch = /sheetId="([^"]+)"/.exec(attrs);
-        const rIdMatch = /(?:r:)?id="([^"]+)"/i.exec(attrs);
-        const name = nameMatch ? nameMatch[1] : '';
-        const sheetId = idMatch ? idMatch[1] : '';
-        const rId = rIdMatch ? rIdMatch[1] : ('rId' + sheetId);
-        const fileTarget = relMap[rId] || `xl/worksheets/sheet${sheetId || (sheets.length + 1)}.xml`;
-        sheets.push({ name, target: fileTarget, sheetId });
-      }
-    }
-
-    if (sheets.length === 0) {
-      const sheetFiles = Object.keys(entries).filter(k => k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml'));
-      sheetFiles.sort();
-      sheetFiles.forEach((f, idx) => {
-        sheets.push({ name: `Sheet${idx + 1}`, target: f, sheetId: String(idx + 1) });
-      });
-    }
-
-    // 5. Parse cell contents for each worksheet
-    function parseSheetData(sheetXml) {
-      if (!sheetXml) return [];
-      const rows = [];
-      const rowRegex = /<row(?:\s+([^>]*?))?>([\s\S]*?)<\/row>/gi;
-      let mRow;
-      while ((mRow = rowRegex.exec(sheetXml)) !== null) {
-        const attrs = mRow[1] || '';
-        const rowIdxMatch = /r="(\d+)"/.exec(attrs);
-        const rowIdx = rowIdxMatch ? parseInt(rowIdxMatch[1], 10) : rows.length + 1;
-        const rowContent = mRow[2];
-        const rowData = {};
-
-        const cellRegex = /<c(?:\s+([^>]*?))?(?:\/>|>([\s\S]*?)<\/c>)/gi;
-        let mCell;
-        while ((mCell = cellRegex.exec(rowContent)) !== null) {
-          const cAttrs = mCell[1] || '';
-          const cellBody = mCell[2] || '';
-
-          const rMatch = /r="([A-Z]+)(\d+)"/.exec(cAttrs);
-          if (!rMatch) continue;
-          const colLetter = rMatch[1];
-          const tMatch = /t="([^"]+)"/.exec(cAttrs);
-          const cellType = tMatch ? tMatch[1] : '';
-
-          let cellVal = '';
-          if (cellType === 's') {
-            const vMatch = /<v>(\d+)<\/v>/.exec(cellBody);
-            if (vMatch) {
-              const sIdx = parseInt(vMatch[1], 10);
-              cellVal = sharedStrings[sIdx] || '';
-            }
-          } else if (cellType === 'inlineStr' || cellType === 'str') {
-            const tMatch2 = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/gi;
-            let mText;
-            while ((mText = tMatch2.exec(cellBody)) !== null) {
-              cellVal += mText[1];
-            }
-            if (!cellVal) {
-              const vMatch = /<v>([\s\S]*?)<\/v>/.exec(cellBody);
-              if (vMatch) cellVal = vMatch[1];
-            }
-          } else {
-            const vMatch = /<v>([\s\S]*?)<\/v>/.exec(cellBody);
-            if (vMatch) cellVal = vMatch[1];
-          }
-          cellVal = cellVal
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&apos;/g, "'")
-            .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d, 10)))
-            .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-            .trim();
-          rowData[colLetter] = cellVal;
-        }
-        rows.push({ rowIdx, cells: rowData });
-      }
-      return rows;
-    }
-
-    const parsedSheets = {};
-    for (const s of sheets) {
-      const xml = entries[s.target] || entries['xl/' + s.target] || entries[s.target.replace(/^xl\//, '')];
-      parsedSheets[s.name] = parseSheetData(xml);
-    }
-    return { sheets, parsedSheets };
-  }
-
-  extractHarvyDataFromWorkbook(workbookData) {
-    const packages = [];
-    const rentals = [];
-
-    const sheetNames = Object.keys(workbookData.parsedSheets);
-    for (let sIdx = 0; sIdx < sheetNames.length; sIdx++) {
-      const sheetName = sheetNames[sIdx];
-      const rows = workbookData.parsedSheets[sheetName];
-      if (!rows || rows.length < 2) continue;
-
-      const lowerName = sheetName.toLowerCase().trim();
-      const isPerlengkapan = lowerName.includes('perlengkap') || 
-                             lowerName.includes('sewa') || 
-                             lowerName.includes('rental') ||
-                             (sIdx === sheetNames.length - 1 && sheetNames.length === 5);
-
-      if (isPerlengkapan) {
-        for (let i = 1; i < rows.length; i++) {
-          const c = rows[i].cells;
-          const category = c['B'] || c['A'] || 'Sewa Perlengkapan';
-          const itemName = c['C'] || c['B'] || '';
-          const priceRaw = (c['D'] || c['C'] || '').replace(/[^0-9]/g, '');
-          const unit = c['E'] || (category.toLowerCase().includes('4 x 6') ? 'plong' : 'unit');
-
-          if (itemName && itemName !== 'Item' && itemName !== 'Nama Item' && itemName !== 'Nama') {
-            const price = parseInt(priceRaw, 10) || 0;
-            const displayName = (category.toLowerCase().includes('4 x 6') && !itemName.toLowerCase().includes('terop'))
-              ? `Terop 4x6 ${itemName}`
-              : itemName;
-
-            const slug = displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-            const id = `rent-${slug}-${i}`;
-
-            rentals.push({
-              id,
-              category: category || 'Sewa Perlengkapan',
-              name: displayName,
-              price,
-              unit: unit || 'unit'
-            });
-          }
-        }
-      } else {
-        let area = 'Area Sekitar';
-        if (lowerName.includes('gresik')) area = 'Area Gresik';
-        else if (lowerName.includes('lamongan')) area = 'Area Lamongan';
-        else if (lowerName.includes('luar')) area = 'Area Luar Kota';
-        else if (lowerName.includes('sekitar')) area = 'Area Sekitar';
-        else if (sIdx === 0) area = 'Area Sekitar';
-        else if (sIdx === 1) area = 'Area Gresik';
-        else if (sIdx === 2) area = 'Area Lamongan';
-        else if (sIdx === 3) area = 'Area Luar Kota';
-
-        for (let i = 1; i < rows.length; i++) {
-          const c = rows[i].cells;
-          const pkgName = c['B'] || '';
-          if (!pkgName || pkgName === 'Nama Paket' || pkgName === 'Paket') continue;
-
-          const price = parseInt((c['C'] || '').replace(/[^0-9]/g, ''), 10) || 0;
-          const desc = c['D'] || '';
-          const decor = c['E'] || '';
-          const effects = c['F'] || '';
-          const docs = c['G'] || '';
-          const makeup = c['H'] || '';
-          const flowers = c['I'] || '';
-          const equipment = c['J'] || '';
-          const otherItems = c['K'] || '';
-          const extraCost = c['L'] || '';
-          const notes = c['M'] || '';
-
-          const rawPkg = {
-            decor,
-            effects,
-            docs,
-            makeup,
-            flowers,
-            equipment,
-            otherItems
-          };
-          const classified = this.classifyPackageLines(rawPkg);
-
-          const slug = pkgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-          const areaCode = area.toLowerCase().includes('gresik') ? 'gresik' : area.toLowerCase().includes('lamongan') ? 'lamongan' : area.toLowerCase().includes('luar') ? 'luar' : 'sekitar';
-          const id = `pkg-${areaCode}-${slug}`;
-
-          packages.push({
-            id,
-            area,
-            name: pkgName,
-            price,
-            desc,
-            decor: classified.decorItems.join('\n'),
-            effects: [...classified.entertainmentItems, ...classified.henaItems].join('\n'),
-            docs: classified.docItems.join('\n'),
-            makeup: classified.attireItems.join('\n'),
-            flowers: classified.flowerItems.join('\n'),
-            equipment: classified.equipmentItems.join('\n'),
-            otherItems: '',
-            extraCost: (extraCost || '').replace(/\r/g, ''),
-            notes: (notes || '').replace(/\r/g, '')
-          });
-        }
-      }
-    }
-    return { packages, rentals };
-  }
-
-
-  renderExcelPreviewTable(selectedArea = 'Area Sekitar') {
-    const container = document.getElementById('containerExcelTablePreview');
-    if (!container) return;
-
-    this.activeExcelPreviewArea = selectedArea;
-
-    // Update active tab buttons
-    document.querySelectorAll('.excel-tab-btn').forEach(btn => {
-      const btnArea = btn.getAttribute('data-excel-area') || (btn.dataset ? btn.dataset.excelArea : '');
-      btn.classList.toggle('active', btnArea === selectedArea);
-    });
-
-    const pkgs = this.harvyPackages || HARVY_PACKAGES;
-    const rentals = this.harvyRentals || HARVY_RENTALS;
-
-    if (selectedArea === 'Perlengkapan') {
-      let html = `
-        <table class="excel-preview-table">
-          <thead>
-            <tr>
-              <th style="width:40px;">No</th>
-              <th>Kategori</th>
-              <th>Item</th>
-              <th>Harga (Rp)</th>
-              <th>Satuan</th>
-              <th>Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      rentals.forEach((r, idx) => {
-        const priceFmt = (r.price || 0).toLocaleString('id-ID');
-        html += `
-          <tr>
-            <td>${idx + 1}</td>
-            <td>${this.escapeHtml(r.category || '')}</td>
-            <td>${this.escapeHtml(r.name || '')}</td>
-            <td>${r.price ? `Rp ${priceFmt}` : '-'}</td>
-            <td>${this.escapeHtml(r.unit || '-')}</td>
-            <td>-</td>
-          </tr>
-        `;
-      });
-
-      html += `
-        </tbody>
-      </table>`;
-      container.innerHTML = html;
-    } else {
-      const normalizeArea = (a) => (a || '').toLowerCase().replace(/^area\s+/i, '').trim();
-      const targetNorm = normalizeArea(selectedArea);
-      const areaPkgs = pkgs.filter(p => normalizeArea(p.area) === targetNorm);
-      let html = `
-        <table class="excel-preview-table">
-          <thead>
-            <tr>
-              <th style="width:40px;">No</th>
-              <th>Nama Paket</th>
-              <th>Harga (Rp)</th>
-              <th>Deskripsi</th>
-              <th>Dekor</th>
-              <th>Efek &amp; Hiburan</th>
-              <th>Dokumentasi &amp; Acara</th>
-              <th>Rias Pengantin</th>
-              <th>Bunga</th>
-              <th>Perlengkapan</th>
-              <th>Biaya Tambahan</th>
-              <th>Catatan / Ketentuan</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      areaPkgs.forEach((p, idx) => {
-        const priceFmt = (p.price || 0).toLocaleString('id-ID');
-        html += `
-          <tr>
-            <td>${idx + 1}</td>
-            <td>${this.escapeHtml(p.name || '')}</td>
-            <td>Rp ${priceFmt}</td>
-            <td>${this.escapeHtml(p.desc || '-')}</td>
-            <td>${this.escapeHtml(p.decor || '-')}</td>
-            <td>${this.escapeHtml(p.effects || '-')}</td>
-            <td>${this.escapeHtml(p.docs || '-')}</td>
-            <td>${this.escapeHtml(p.makeup || '-')}</td>
-            <td>${this.escapeHtml(p.flowers || '-')}</td>
-            <td>${this.escapeHtml(p.equipment || '-')}</td>
-            <td>${this.escapeHtml(p.extraCost || '-')}</td>
-            <td>${this.escapeHtml(p.notes || '-')}</td>
-          </tr>
-        `;
-      });
-
-      html += `</tbody></table>`;
-      container.innerHTML = html;
-    }
-  }
-
-  escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-}
-
-// Global bootstrap
-function bootMahligaiApp() {
-  if (!window.app) {
-    window.app = new WeddingApp();
-  }
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=21.8', { scope: './' })
-      .then((reg) => {
-        reg.update();
-        console.log('Mahligai WO PWA Service Worker aktif: ', reg.scope);
-      })
-      .catch((err) => {
-        console.log('SW registration note:', err);
-      });
-  }
-
-  if (window.location.hash.startsWith('#edit-')) {
-    const eventId = window.location.hash.substring(6);
-    const ev = window.app.events.find(x => x.id === eventId);
-    if (ev) window.app.openEventModal('edit', eventId);
-  }
-}
-
-if (typeof window !== 'undefined') {
-  if (document.readyState === 'interactive' || document.readyState === 'complete') {
-    bootMahligaiApp();
-  } else {
-    document.addEventListener('DOMContentLoaded', bootMahligaiApp);
-  }
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    WeddingApp,
-    HARVY_CATALOG,
-    getDefaultBrandConfig,
-    getInitialAdminList,
-    getInitialMasterCrew,
-    getInitialEvents
+function importOldApp(d) {
+  const rd = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
+  const oldCrew = rd("mahligai_master_crew_v2"), oldEv = rd("mahligai_wedding_events_fresh_v2"), oldBrand = rd("mahligai_brand_config_v2");
+  if (!Array.isArray(oldCrew) && !Array.isArray(oldEv)) return;
+  const findOrAdd = (nama, role) => {
+    nama = String(nama || "").trim(); if (!nama) return null;
+    let t = d.tim.find(x => normNama(x.nama) === normNama(nama));
+    if (!t) { t = { id: uid(), nama, peran: OLD_ROLE[role] || role || "Crew Rias", hp: "", aktif: true }; d.tim.push(t); }
+    return t;
   };
+  (oldCrew || []).filter(c => !OLD_DEMO_PEOPLE.includes(normNama(c.name))).forEach(c => { const t = findOrAdd(c.name, c.role); if (t && c.phone && !t.hp) t.hp = c.phone; });
+  const strip = s => String(s || "").replace(/^\s*[-•*]\s*/, "").trim();
+  let n = 0;
+  (oldEv || []).filter(e => e && !OLD_DEMO.includes(e.id)).forEach(e => {
+    const locs = e.locations || [], ak = locs.find(l => l.isAkad), rs = locs.find(l => l.isReception) || locs[0] || {};
+    const jam = l => l ? (l.time || [l.startTime, l.endTime].filter(Boolean).join(" - ")) : "";
+    const o = blankOrder();
+    o._oldLocs = locs.map(l => ({ jenis: l.isAkad && l.isReception ? "both" : l.isAkad ? "akad" : l.isReception ? "resepsi" : "lain", namaAcara: l.eventName || l.name || l.label || "", jamAkad: l.isAkad ? jam(l) : "", jamResepsi: l.isReception ? jam(l) : "", jam: jam(l), tempat: l.venueName || l.venueType || "", alamat: l.venueAddress || "", maps: "" }));
+    Object.assign(o, {
+      tanggal: e.date || "", nama: e.coupleName || "", ig: e.clientIg || "", hp: e.clientPhone || "", bapak: e.fatherName || "", ibu: e.motherName || "",
+      mc: e.vendorMc || "", foto: e.vendorPhoto || "", shot: e.vendorVideo || "", hena: e.vendorHenna || "",
+      jamAkad: e.akadTime || jam(ak), lokasiAkad: ak ? (ak.venueName || ak.venueType || "") : "", jamResepsi: e.resepsiTime || (rs.isReception ? jam(rs) : ""),
+      alamatLain: rs.venueAddress || (ak && ak.venueAddress) || "", nb: e.specialNotes || "", gaun: [], wilayahId: d.wilayah[0]?.id || ""
+    });
+    lines(e.makeupNotes).forEach(x => o.jadwalMakeup += (o.jadwalMakeup ? "\n" : "") + strip(x));
+    const cat = [];
+    lines(e.attireNotes).forEach(x => {
+      const m = x.match(/^\d+[.)]\s*(.*)$/); const mel = strip(x).match(/^melati\s*:\s*(.*)$/i);
+      if (m) o.gaun.push({ baju: m[1], pasangan: "", hijab: "", harga: 0 }); else if (mel) o.melati = mel[1]; else cat.push(strip(x));
+    });
+    o.gaunCatatan = cat.join("; ");
+    o.perlengkapan = lines(e.logisticsNotes).filter(x => !/untuk paket/i.test(x)).map(strip).join("\n");
+    (e.crew || []).forEach(c => { if (["MC", "Fotografer", "Videografer"].includes(c.role)) return; const t = findOrAdd(c.name, c.role); if (t && !o.crew.includes(t.id)) o.crew.push(t.id); });
+    d.orders.push(o); n++;
+  });
+  if (oldBrand && typeof oldBrand.logoUrl === "string" && oldBrand.logoUrl.startsWith("data:")) d.settings.logo = oldBrand.logoUrl;
+  d._imported = n;
 }
+function migrate(d) {
+  const def = defaultDB();
+  const needRoster = !(d.settings && d.settings.rosterV3);
+  for (const k of ["wilayah", "paket", "addons", "tim", "orders"]) if (!Array.isArray(d[k])) d[k] = def[k];
+  d.settings = Object.assign({}, def.settings, d.settings || {});
+  d.settings.waShow = Object.assign({}, def.settings.waShow, d.settings.waShow || {});
+  d.katalog = Object.assign({}, def.katalog, d.katalog || {});
+  removeDemoPeople(d); mergeDupes(d);
+  d.tim.forEach(x => { if (x.peran === "Crew") x.peran = "Crew Rias"; if (!ROLES.includes(x.peran)) x.peran = "Lainnya"; });
+  if (needRoster) { rosterList().forEach(r => { if (!d.tim.some(x => normNama(x.nama) === normNama(r.nama))) d.tim.push(r); }); d.settings.rosterV3 = true; }
+  d.orders.forEach(o => linkLegacy(d, o));
+  canonTim(d);
+  return d;
+}
+/* samakan nama & peran dengan daftar resmi Harvy, dan urutkan sesuai daftar itu (orang tambahan sendiri di belakang) */
+function canonTim(d) {
+  const resmi = Object.entries(ROSTER).flatMap(([peran, names]) => names.map(nama => ({ nama, peran })));
+  const pos = x => resmi.findIndex(r => normNama(r.nama) === normNama(x.nama));
+  d.tim.forEach(x => { const i = pos(x); if (i >= 0) { x.nama = resmi[i].nama; x.peran = resmi[i].peran; } });
+  d.tim.sort((a, b) => { const i = pos(a), j = pos(b); return (i < 0 ? 1e6 : i) - (j < 0 ? 1e6 : j); });
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); }
+  catch (e) { toast("Gagal menyimpan — memori penuh? Coba backup & hapus data lama."); }
+}
+db = load();
+try { if (!localStorage.getItem(KEY)) save(); } catch (e) {}
+
+/* ---------- helpers ---------- */
+const timById = id => db.tim.find(t => t.id === id);
+const wilById = id => db.wilayah.find(w => w.id === id);
+const paketById = id => db.paket.find(p => p.id === id);
+/* ---------- LOKASI: satu acara bisa punya Lokasi 1, 2, dst ---------- */
+const LJENIS = [["both", "Akad & resepsi"], ["akad", "Akad"], ["resepsi", "Resepsi"], ["lain", "Acara lain"]];
+const newLok = (x = {}) => Object.assign({ id: uid(), jenis: "both", namaAcara: "", jamAkad: "", jamResepsi: "", jam: "", tempat: "", tempatAkad: "", alamat: "", maps: "" }, x);
+const lokOf = o => (Array.isArray(o.lokasi) && o.lokasi.length ? o.lokasi : []);
+const lokJudul = l => l.jenis === "lain" ? (String(l.namaAcara || "").trim() || "Acara lain") : (LJENIS.find(x => x[0] === l.jenis) || LJENIS[0])[1];
+const akadDi = l => String(l.tempatAkad || "").trim() ? ` (di ${String(l.tempatAkad).trim().replace(/^di\s+/i, "")})` : "";
+const lokJam = l => l.jenis === "both" ? [["Akad", (l.jamAkad || "") + akadDi(l)], ["Resepsi", l.jamResepsi]] : l.jenis === "akad" ? [["Akad", (l.jamAkad || "") + akadDi(l)]] : l.jenis === "resepsi" ? [["Resepsi", l.jamResepsi]] : [[lokJudul(l), l.jam]];
+const lokKe = o => String(o.lokasiKe || "").trim();
+const lokLabel = o => "LOKASI" + (lokKe(o) ? " " + lokKe(o) : "");
+const lokTempat = l => [l.tempat, l.alamat].map(x => String(x || "").trim()).filter(Boolean).join(", ");
+/* alamat lama (sebelum ada Lokasi 1/2) */
+function alamatLama(o) {
+  if (o.alamatLain && o.alamatLain.trim()) return o.alamatLain.trim();
+  const a = [];
+  if (o.dsn) a.push("Dsn. " + o.dsn);
+  const desa = o.desa ? "Desa " + o.desa : "", rtrw = [o.rt && "RT " + o.rt, o.rw && "RW " + o.rw].filter(Boolean).join(" / ");
+  if (desa || rtrw) a.push([desa, rtrw].filter(Boolean).join(" "));
+  if (o.kec) a.push(o.kec); if (o.kab) a.push(o.kab);
+  return a.join(", ");
+}
+/* satu acara = satu lokasi (akad & resepsi bisa di lokasi yang sama). Data lama / data yang sempat terpecah digabung jadi satu. */
+function toLokasi(o) {
+  if (Array.isArray(o._oldLocs) && o._oldLocs.length && !lokOf(o).length) o.lokasi = o._oldLocs.map(x => newLok(x));
+  delete o._oldLocs;
+  if (!lokOf(o).length) {
+    const a = String(o.jamAkad || o.lokasiAkad || "").trim(), r = String(o.jamResepsi || "").trim();
+    const j = o.jenisAcara || (a && !r ? "akad" : r && !a ? "resepsi" : "both");
+    o.lokasi = [newLok({ jenis: j, jamAkad: o.jamAkad || "", jamResepsi: o.jamResepsi || "", tempatAkad: j === "both" ? String(o.lokasiAkad || "").trim() : "", tempat: j === "akad" ? String(o.lokasiAkad || "").trim().replace(/^di\s+/i, "") : "", alamat: alamatLama(o), maps: String(o.mapsLink || "").trim() })];
+  }
+  if (o.lokasi.length > 1) {
+    const L = o.lokasi, ak = L.find(l => l.jenis === "akad" || l.jenis === "both"), rs = L.find(l => l.jenis === "resepsi" || l.jenis === "both");
+    const main = rs || ak || L[0], jenis = ak && rs ? "both" : ak ? "akad" : rs ? "resepsi" : main.jenis;
+    const beda = ak && rs && ak !== rs ? lokTempat(ak) : "";
+    const sisa = L.filter(l => l !== main && l !== ak && l !== rs);
+    o.lokasi = [newLok({ ...main, jenis, jamAkad: ak ? ak.jamAkad : "", jamResepsi: rs ? rs.jamResepsi : "", tempatAkad: beda || main.tempatAkad || "", maps: main.maps || (L.find(l => l.maps) || {}).maps || "" })];
+    // lokasi lain (mis. acara lain) jangan hilang: simpan ke catatan
+    if (sisa.length) o.nb = [o.nb, ...sisa.map(l => `${lokJudul(l)}: ${[l.jam || l.jamAkad || l.jamResepsi, lokTempat(l)].filter(Boolean).join(" — ")}`)].filter(Boolean).join("\n");
+  }
+  o.lokasi.forEach(l => { if (!("tempatAkad" in l)) l.tempatAkad = ""; });
+  return o;
+}
+const alamatStr = o => lokOf(o).map(lokTempat).filter(Boolean).join(" | ");
+function acaraStr(o) {
+  const p = lokOf(o).map(l => lokJam(l).map(([n, j]) => [n, j].filter(x => String(x || "").trim()).join(" ")).join(", "));
+  if (o.acaraMalam) p.push("ada acara malam");
+  return p.join(" · ");
+}
+/* Apa yang masih kosong supaya jadwal siap dikirim ke grup */
+function missing(o) {
+  const m = [], L = lokOf(o);
+  if (!o.tanggal) m.push("tanggal");
+  if (!L.length) m.push("lokasi");
+  L.forEach(l => {
+    if (!lokTempat(l)) m.push("alamat");
+    lokJam(l).forEach(([nm, j]) => { if (!String(j || "").replace(/\(di .*\)$/, "").trim()) m.push(`jam ${nm.toLowerCase()}`); });
+  });
+  if (!(o.crew || []).length) m.push("crew");
+  return m;
+}
+function statusOf(o) {
+  if (o.batal) return ["Batal", "bad"];
+  const m = missing(o);
+  if (m.length) return ["Belum lengkap", "warn"];
+  return [`${(o.crew || []).length} kru`, "ok"];
+}
+const WA_FIELDS = [["tanggal", "Tanggal"], ["ig", "IG"], ["tiktok", "TikTok"], ["ortu", "Orang tua"], ["hp", "No HP"], ["alamat", "Alamat"], ["maps", "Link lokasi"], ["paket", "Paket"], ["admin", "Kontak admin"]];
+const roleIdx = r => { const i = ROLES.indexOf(r); return i < 0 ? 99 : i; };
+const teamOf = o => (o.crew || []).map(id => timById(id)).filter(Boolean).sort((a, b) => roleIdx(a.peran) - roleIdx(b.peran));
+const NON_CREW = ["MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone"];
+const crewNames = o => teamOf(o).filter(t => !NON_CREW.includes(t.peran)).map(t => t.nama);
+const roleNames = (o, r) => teamOf(o).filter(t => t.peran === r).map(t => t.nama).join(", ");
+const teamLine = t => `${t.nama} - ${t.peran}${t.hp ? ` (${t.hp})` : ""}`;
+const initials = n => String(n || "?").trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+const ambilLink = s => { const m = String(s || "").match(/https?:\/\/\S+/); return m ? m[0].replace(/[).,]+$/, "") : String(s || "").trim(); };
+const paketLabel = o => { const p = paketById(o.paketId); if (p && o.paketMode !== "") return `${p.nama} · ${wilById(p.wilayahId)?.nama || ""}`; return String(o.paketNama || "").trim() || (String(o.isiPaket || "").trim() ? "Paket custom" : "-"); };
+const activeOrders = () => db.orders.filter(o => !o.batal);
+const sortByDate = arr => arr.sort((a, b) => (a.tanggal || "9999").localeCompare(b.tanggal || "9999"));
+const conflicts = (crewId, tanggal, exceptId) => tanggal ? db.orders.filter(o => !o.batal && o.id !== exceptId && o.tanggal === tanggal && (o.crew || []).includes(crewId)) : [];
+
+/* ---------- WA text ---------- */
+/* pratinjau: tampilkan *tebal* dan _miring_ seperti di WhatsApp */
+let curWA = "";
+const waFmt = t => esc(t).replace(/\*([^*\n]+)\*/g, "<b>$1</b>").replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,]|$)/gm, "$1<i>$2</i>");
+const waCrew = (o, show = db.settings.waShow) => db.settings.waFormat === "klasik" ? waKlasik(o, show) : waBriefing(o, show);
+const isi = x => { const s = String(x ?? "").trim(); return s && s !== "-" ? s : ""; };
+const waNum = p => { p = String(p || "").replace(/\D/g, ""); return p.startsWith("0") ? "62" + p.slice(1) : p; };
+/* Format briefing rapi ber-emoji (bawaan) */
+function waBriefing(o, show = db.settings.waShow) {
+  const s = db.settings, GAR = "----------------------------------------", L = [];
+  const sec = (judul, rows) => { rows = rows.filter(Boolean); if (rows.length) { L.push(GAR); L.push(judul); rows.forEach(r => L.push(r)); L.push(""); } };
+  L.push("*BRIEFING ACARA PERNIKAHAN*");
+  L.push(`*${s.bizName.toUpperCase()}*`);
+  L.push(GAR);
+  if (show.tanggal) L.push(`📅 *TANGGAL:* ${o.tanggal ? fmtD(o.tanggal) : "-"}`, "");
+  L.push(`✨ *MEMPELAI:* ${o.nama || "-"}`);
+  if (show.ig && isi(o.ig)) L.push(`📸 *IG MANTEN:* ${o.ig}`);
+  if (show.tiktok && isi(o.tiktok)) L.push(`🎵 *TIKTOK:* ${o.tiktok}`);
+  if (show.ortu) { const ot = [isi(o.bapak) && "Bpk. " + o.bapak, isi(o.ibu) && "Ibu " + o.ibu].filter(Boolean).join(" & "); if (ot) L.push(`👥 *ORANG TUA:* ${ot}`); }
+  if (show.hp && isi(o.hp)) L.push(`📱 *NO. HP/WA:* ${o.hp}`);
+  L.push("");
+  lokOf(o).forEach(l => sec(`📍 *${lokLabel(o)} — ${lokJudul(l).toUpperCase()}*`, [
+    ...lokJam(l).map(([n, j]) => `• ${n}: ${isi(j) || "-"}`),
+    isi(l.tempat) && `• Tempat: ${l.tempat}`,
+    show.alamat && isi(l.alamat) && `• Alamat: ${l.alamat}`,
+    show.maps && isi(l.maps) && `• Google Maps: ${l.maps}`
+  ]));
+  if (o.acaraMalam) sec("🌙 *ACARA MALAM:*", ["• Ada acara malam"]);
+  sec("💄 *JADWAL MAKE UP:*", kisi(o, "makeup").map(x => "• " + x));
+  sec("👗 *URUTAN GAUN & BUSANA:*", [
+    ...kisi(o, "gaun").map((x, i) => `${i + 1}. ${x}`),
+    kisi(o, "melati").length && `🌼 Melati: ${kisi(o, "melati").join(", ")}`
+  ]);
+  sec("🎪 *PAKET & FASILITAS:*", [
+    show.paket && paketLabel(o) !== "-" && `• Paket: ${paketLabel(o)}`,
+    ...otherBoxes(o).map(b => `▪️ *${b.judul || "Lainnya"}:* ${lines(b.isi).map(x => x.replace(BUL, "")).join(", ")}`)
+  ]);
+  sec("🚚 *PERLENGKAPAN DIBAWA:*", kisi(o, "perlengkapan").map((x, i) => `${i + 1}. ${x}`));
+  sec("👥 *TIM KRU BERTUGAS:*", teamOf(o).map((t, i) => `${i + 1}. ${teamLine(t)}`));
+  sec("📝 *KETERANGAN:*", kisi(o, "nb").map(x => "• " + x));
+  if (s.footer.trim()) { L.push(GAR); L.push(s.footer.trim()); L.push(""); }
+  const adm = s.hpAdmin || s.hpOwner;
+  if (show.admin && adm) { L.push(GAR); L.push("📞 *NARAHUBUNG ADMIN WO:*"); L.push(`Admin ${s.bizName} (${adm})`); L.push(`Chat WA: https://wa.me/${waNum(adm)}`); }
+  L.push(`— Tim ${s.bizName.toUpperCase()}.`);
+  return L.join("\n").replace(/\n{3,}/g, "\n\n");
+}
+/* Format klasik (seperti pesan grup lama) */
+function waKlasik(o, show = db.settings.waShow) {
+  const L = [], v = x => (x && String(x).trim()) ? x : "-";
+  if (show.tanggal) L.push(`*Tanggal*      : ${o.tanggal ? fmtD(o.tanggal) : "-"}`);
+  L.push(`*Nama*        : ${v(o.nama)}`);
+  if (show.ig) L.push(`*IG Manten* : ${v(o.ig)}`);
+  if (show.tiktok) L.push(`*Tik tok*       : ${v(o.tiktok)}`);
+  if (show.ortu) { L.push(`*Bapak*        : ${v(o.bapak)}`); L.push(`*Ibu*             : ${v(o.ibu)}`); }
+  if (show.hp) L.push(`*No. Hp*      : ${v(o.hp)}`);
+  const lk = lokOf(o)[0] || {};
+  if (lokKe(o)) L.push(`*Lokasi*        : ${lokKe(o)}`);
+  if (show.alamat) L.push(`*Alamat*      : ${v(lokTempat(lk))}`);
+  if (show.maps && isi(lk.maps)) L.push(`*Maps*          : ${lk.maps}`);
+  L.push(`*Acara*        : ${v(acaraStr(o))}`);
+  if (show.paket) L.push(`*Paket*        : ${v(paketLabel(o))}`);
+  L.push(`*MC*             : ${v(roleNames(o, "MC"))}`);
+  L.push(`*Foto*           : ${v(roleNames(o, "Foto"))}`);
+  L.push(`*Shot*           : ${v(roleNames(o, "Video"))}`);
+  ["Dry Smoke", "Cucuk Lampah", "Electone"].forEach(r => { if (roleNames(o, r)) L.push(`*${r}* : ${roleNames(o, r)}`); });
+  const g = kisi(o, "gaun");
+  L.push(`*Gaun*          : ${g.length ? "" : "-"}`);
+  g.forEach((x, i) => L.push(` ${i + 1}. ${x}`));
+  L.push("");
+  L.push(`*Melati*         : ${v(kisi(o, "melati").join(", "))}`);
+  const c = crewNames(o);
+  L.push(`*Crew*           :${c.length ? "" : " -"}`);
+  c.forEach((n, i) => L.push(`                           ${i + 1}. ${n}`));
+  L.push(`*Hena*           : ${v(roleNames(o, "Hena"))}`);
+  otherBoxes(o).forEach(b => L.push(`*${b.judul || "Lainnya"}* : ${lines(b.isi).map(x => x.replace(BUL, "")).join(", ")}`));
+  const nb = kisi(o, "nb");
+  if (nb.length) { L.push(""); L.push("Nb :"); nb.forEach(x => L.push(`- ${x}`)); }
+  const jm = kisi(o, "makeup");
+  if (jm.length) { L.push(""); jm.forEach(x => L.push(`- ${x}`)); }
+  const pl = kisi(o, "perlengkapan");
+  if (pl.length) { L.push(""); L.push(`- *Untuk paket yg ikut dr ${db.settings.bizName.split(" ")[0].toLowerCase()} :*`); pl.forEach(x => L.push(`- ${x}`)); }
+  if (db.settings.footer.trim()) { L.push(""); L.push(db.settings.footer.trim()); }
+  return L.join("\n");
+}
+function waRekap(list, judul) {
+  const L = [`*${judul}*`, ""];
+  if (!list.length) L.push("Belum ada acara.");
+  list.forEach((o, i) => {
+    L.push(`*${i + 1}. ${o.nama}* — ${o.tanggal ? fmtD(o.tanggal, { weekday: "long", day: "numeric", month: "long" }) : "tgl belum ada"}`);
+    lokOf(o).forEach(l => {
+      L.push(`   📍 ${lokKe(o) ? `Lokasi ${lokKe(o)} · ` : ""}${lokJam(l).map(([n, jm]) => [n, jm].filter(x => isi(x)).join(" ")).join(", ")}${lokTempat(l) ? " — " + lokTempat(l) : ""}`);
+      L.push(`   🗺️ ${isi(l.maps) || "link lokasi belum ada"}`);
+    });
+    if (o.acaraMalam) L.push("   🌙 ada acara malam");
+    const tm = teamOf(o); L.push(`   👥 ${tm.length ? tm.map(t => `${t.nama} (${t.peran})`).join(", ") : "-"}`);
+    L.push("");
+  });
+  if (db.settings.footer.trim()) L.push(db.settings.footer.trim());
+  return L.join("\n");
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); }
+  catch { const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  toast("Teks disalin — tinggal tempel di grup WA");
+}
+function waLink(text, phone) {
+  let p = String(phone || "").replace(/\D/g, ""); if (p.startsWith("0")) p = "62" + p.slice(1);
+  return `https://wa.me/${p}?text=${encodeURIComponent(text)}`;
+}
+async function shareText(text) {
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e.name === "AbortError") return; } }
+  window.open(waLink(text), "_blank");
+}
+
+/* ---------- UI helpers ---------- */
+function toast(msg) { $$(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.innerHTML = ic("check") + esc(msg); document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+function modal(html, onMount) {
+  const bg = document.createElement("div"); bg.className = "modal-bg"; bg.innerHTML = `<div class="modal" role="dialog">${html}</div>`;
+  const close = () => bg.remove();
+  bg.addEventListener("click", e => { if (e.target === bg || e.target.closest("[data-close]")) close(); });
+  document.body.appendChild(bg); onMount && onMount(bg.firstElementChild, close); return close;
+}
+function confirmBox(msg, okLabel = "Hapus") {
+  return new Promise(res => {
+    modal(`<h2>Yakin?</h2><p>${esc(msg)}</p><div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" data-close>Batal</button><button class="btn gold" id="okc">${esc(okLabel)}</button></div>`,
+      (m, close) => { $("#okc", m).onclick = () => { close(); res(true); }; m.parentElement.addEventListener("click", e => { if (e.target.closest("[data-close]") || e.target === m.parentElement) res(false); }); });
+  });
+}
+function applyTheme() {
+  const t = db.settings.theme; if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = t;
+  $("#logo1").src = logoSrc(); $("#bizName1").textContent = db.settings.bizName;
+}
+const NAV = [["dashboard", "Dashboard", "home"], ["acara", "Acara", "list"], ["arsip", "Arsip", "arsip"], ["kalender", "Kalender", "cal"], ["tim", "Tim", "users"], ["pengaturan", "Pengaturan", "set"]];
+const navBy = k => NAV.find(x => x[0] === k);
+function renderNav(cur) {
+  $("#nav").innerHTML = NAV.map(([k, l, i]) => `<a href="#/${k}" class="${cur === k ? "on" : ""}">${ic(i)}${l}</a>`).join("");
+  const tb = [navBy("dashboard"), navBy("acara"), ["acara/baru", "Baru", "plus"], navBy("kalender"), navBy("pengaturan")];
+  $("#tabbar").innerHTML = tb.map(([k, l, i]) => k === "acara/baru"
+    ? `<a href="#/acara/baru" class="fab"><span class="c">${ic(i)}</span></a>`
+    : `<a href="#/${k}" class="${cur === k ? "on" : ""}">${ic(i)}<span>${l}</span></a>`).join("");
+}
+const mtop = () => `<div class="mtop"><img src="${esc(logoSrc())}" alt=""><b>${esc(db.settings.bizName)}</b></div>`;
+function evRow(o, extra = "") {
+  const d = parseD(o.tanggal), [ps, pc] = statusOf(o), dt = daysTo(o.tanggal);
+  const hd = o.tanggal ? (dt === 0 ? "Hari ini" : dt === 1 ? "Besok" : dt > 0 ? `H-${dt}` : "") : "";
+  return `<a class="ev" href="#/acara/${esc(o.id)}">
+    <div class="date ${d ? "" : "none"}">${d ? `<small>${d.toLocaleDateString("id-ID", { month: "short" })}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString("id-ID", { weekday: "short" })}</small>` : `<b>?</b><small>tgl</small>`}</div>
+    <div class="grow" style="min-width:0"><div class="t">${esc(o.nama || "Tanpa nama")}</div>
+      <div class="m"><span>${ic("pin")}${esc(alamatStr(o) || "Alamat belum diisi")}</span>${acaraStr(o) ? `<span>${ic("clock")}${esc(acaraStr(o))}</span>` : ""}${extra}</div></div>
+    <div class="r">${hd ? `<span class="pill gold">${hd}</span>` : ""}<span class="pill ${pc}">${esc(ps)}</span>${(() => { const L = lokOf(o), withMaps = L.map((l, i) => [l, i]).filter(([l]) => isi(l.maps)); return `${lokKe(o) ? `<span class="pill gold">Lokasi ${esc(lokKe(o))}</span>` : ""}${withMaps.length ? withMaps.map(([l, i]) => `<span class="pill maps" role="button" data-act="openmaps" data-id="${esc(o.id)}" data-li="${i}" title="Buka di Google Maps">${ic("pin")}Maps</span>`).join("") : (o.tanggal && o.tanggal >= todayStr() && !o.batal ? `<span class="pill">tanpa link lokasi</span>` : "")}`; })()}</div></a>`;
+}
+
+/* ---------- VIEWS ---------- */
+function vDashboard() {
+  const t = todayStr(), now = new Date();
+  const act = activeOrders();
+  const upcoming = sortByDate(act.filter(o => o.tanggal && o.tanggal >= t && !o.selesai));
+  const mKey = t.slice(0, 7);
+  const thisMonth = act.filter(o => (o.tanggal || "").startsWith(mKey));
+  const wEnd = sebulanLagi();
+  const week = upcoming.filter(o => o.tanggal <= wEnd);
+  const kurang = upcoming.filter(o => missing(o).length);
+  const kruMinggu = new Set(week.flatMap(o => o.crew || [])).size;
+  const nodate = act.filter(o => !o.tanggal);
+  const next = upcoming[0];
+  const hr = now.getHours(), salam = hr < 11 ? "Selamat pagi" : hr < 15 ? "Selamat siang" : hr < 18 ? "Selamat sore" : "Selamat malam";
+  const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() + i, 1); const k = ymd(d).slice(0, 7); return { l: d.toLocaleDateString("id-ID", { month: "short" }), n: act.filter(o => (o.tanggal || "").startsWith(k)).length }; });
+  const mx = Math.max(1, ...months.map(m => m.n));
+  return `${mtop()}${installCard()}<div class="top"><div><h1>${salam} ✨</h1><p>${fmtD(t)}</p></div>
+    <div class="row noprint"><button class="btn" data-act="rekap">${ic("wa")}Rekap 1 bulan ke depan</button><a class="btn gold" href="#/acara/baru">${ic("plus")}Acara Baru</a></div></div>
+  ${next ? `<div class="card today" style="margin-bottom:16px"><div class="lbl">${daysTo(next.tanggal) === 0 ? "Acara hari ini" : "Acara terdekat · H-" + daysTo(next.tanggal)}</div>
+    <h2 class="sec-h">${esc(next.nama)}</h2><div class="muted">${fmtD(next.tanggal)} · ${esc(alamatStr(next) || "-")}</div>
+    <div class="muted small" style="margin-top:4px">${esc(acaraStr(next) || "")}${crewNames(next).length ? " · Crew: " + esc(crewNames(next).join(", ")) : ""}</div>
+    <div class="row" style="margin-top:14px;position:relative;z-index:1"><a class="btn sm gold" href="#/acara/${next.id}">Lihat detail</a><button class="btn sm wa" data-act="sendcrew" data-id="${next.id}">${ic("wa")}Kirim ke grup</button></div></div>` : ""}
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat hero"><div class="k">${ic("cal")}Bulan ini</div><div class="v">${thisMonth.length}</div><div class="s">acara · ${now.toLocaleDateString("id-ID", { month: "long" })}</div></div>
+    <div class="card stat"><div class="k">${ic("clock")}1 bulan ke depan</div><div class="v">${week.length}</div><div class="s">acara s/d ${fmtD(wEnd, { day: "numeric", month: "short" })}</div></div>
+    <div class="card stat"><div class="k">${ic("users")}Kru 1 bulan ke depan</div><div class="v">${kruMinggu}</div><div class="s">orang bertugas</div></div>
+    <div class="card stat"><div class="k">${ic("edit")}Perlu dilengkapi</div><div class="v">${kurang.length + nodate.length}</div><div class="s">acara belum lengkap</div></div>
+  </div>
+  <div class="grid dash">
+    <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Jadwal mendatang</h2><a href="#/acara" class="small">Semua →</a></div>
+      ${upcoming.length ? upcoming.slice(0, 8).map(o => evRow(o)).join("") : `<div class="empty">${ic("cal")}<div>Belum ada acara mendatang.</div><a class="btn gold sm" style="margin-top:10px" href="#/acara/baru">Tambah acara</a></div>`}
+      ${nodate.length ? `<div class="hr"></div><h3>Belum ada tanggal (${nodate.length})</h3>${nodate.map(o => evRow(o)).join("")}` : ""}
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><h2>6 bulan ke depan</h2><div class="bars">${months.map(m => `<div class="b"><em>${m.n || ""}</em><i class="${m.n ? "" : "z"}" style="height:${Math.max(4, m.n / mx * 100)}%"></i><span>${m.l}</span></div>`).join("")}</div></div>
+      <div class="card"><h2>Perlu dilengkapi</h2>${kurang.length + nodate.length ? [...kurang, ...nodate].slice(0, 8).map(o => `<a class="li" href="#/acara/${esc(o.id)}/edit" style="text-decoration:none;color:inherit"><div class="grow"><div class="t">${esc(o.nama)}</div><div class="small muted">${o.tanggal ? fmtD(o.tanggal, { day: "numeric", month: "short", year: "numeric" }) : "tanggal belum ada"}</div></div><span class="pill warn">belum: ${esc(missing(o).join(", "))}</span></a>`).join("") : `<div class="empty small">Semua jadwal sudah lengkap 👍</div>`}</div>
+    </div>
+  </div>`;
+}
+
+let listState = { q: "", f: "mendatang" };
+function vAcara() {
+  const t = todayStr();
+  let arr = db.orders.slice();
+  const q = listState.q.toLowerCase().trim();
+  if (q) arr = arr.filter(o => [o.nama, alamatStr(o), o.hp, o.ig, o.tiktok, o.ibu, o.bapak, teamOf(o).map(x => x.nama).join(" ")].join(" ").toLowerCase().includes(q));
+  const f = listState.f;
+  if (f === "mendatang") arr = arr.filter(o => !isArsip(o));
+  if (f === "belum") arr = arr.filter(o => !isArsip(o) && missing(o).length);
+  sortByDate(arr);
+  const groups = {};
+  arr.forEach(o => { const k = o.tanggal ? o.tanggal.slice(0, 7) : "zz"; (groups[k] = groups[k] || []).push(o); });
+  const F = [["mendatang", "Mendatang"], ["belum", "Perlu dilengkapi"], ["semua", "Semua"], ["arsip", `Arsip (${db.orders.filter(isArsip).length}) →`]];
+  return `${mtop()}<div class="top"><div><h1>Acara</h1><p>${db.orders.length} data calon pengantin</p></div><div class="row"><button class="btn" data-act="exportxlsx">${ic("down")}Excel</button><a class="btn gold" href="#/acara/baru">${ic("plus")}Acara Baru</a></div></div>
+  <div class="row" style="margin-bottom:12px"><div class="search">${ic("search")}<input class="in" id="q" placeholder="Cari nama, desa, no HP…" value="${esc(listState.q)}"></div></div>
+  <div class="tabs">${F.map(([k, l]) => `<button class="tab ${f === k ? "on" : ""}" data-filter="${k}">${l}</button>`).join("")}</div>
+  <div id="listwrap">${arr.length ? Object.keys(groups).sort().map(k => `<div class="month-h"><span>${k === "zz" ? "Belum ada tanggal" : parseD(k + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</span><span>${groups[k].length} acara</span></div><div class="card" style="padding:6px">${groups[k].map(o => evRow(o)).join("")}</div>`).join("") : `<div class="card empty">${ic("search")}<div>Tidak ada acara yang cocok.</div></div>`}</div>`;
+}
+
+function vDetail(id) {
+  const o = db.orders.find(x => x.id === id); if (!o) return `<div class="card empty">Data tidak ditemukan. <a href="#/acara">Kembali</a></div>`;
+  const [ps, pc] = statusOf(o), s = db.settings.waShow;
+  const kv = (k, v) => `<dt>${k}</dt><dd>${esc(v || "-")}</dd>`;
+  const cl = checklistItems(o);
+  const cekDone = cl.filter(x => o.cek?.[x]?.d).length, cekPulang = cl.filter(x => o.cek?.[x]?.p).length;
+  const crew = (o.crew || []).map(id => timById(id)).filter(Boolean);
+  return `${mtop()}<a class="back noprint" href="#/acara">${ic("left")}Acara</a>
+  <div class="top"><div><h1>${esc(o.nama || "Tanpa nama")}</h1><p>${fmtD(o.tanggal)} &nbsp;<span class="pill ${pc}">${esc(ps)}</span></p></div>
+    <div class="row noprint">${lokOf(o).map((l, i) => isi(l.maps) ? `<button class="btn wa" data-act="openmaps" data-id="${esc(o.id)}" data-li="${i}">${ic("pin")}Buka lokasi</button>` : "").join("")}<button class="btn" data-act="dup" data-id="${esc(o.id)}">${ic("dup")}Duplikat</button><a class="btn gold" href="#/acara/${esc(o.id)}/edit">${ic("edit")}Edit</a></div></div>
+  <div class="grid dash">
+    <div class="grid" style="align-content:start">
+      <div class="card"><h2>Jadwal untuk grup WA</h2>
+        <div class="row small noprint" style="gap:14px;margin-bottom:10px">${WA_FIELDS.map(([k, l]) => `<label class="toggle"><input type="checkbox" data-wshow="${k}" ${s[k] ? "checked" : ""}>${l}</label>`).join("")}</div>
+        <div class="wa-prev"><div class="bubble" id="watext">${waFmt(curWA = waCrew(o))}</div></div>
+        <div class="row noprint" style="margin-top:12px"><button class="btn wa grow" data-act="share" data-id="${esc(o.id)}">${ic("share")}Kirim / Bagikan</button><button class="btn grow" data-act="copy">${ic("copy")}Salin teks</button></div>
+        <p class="small muted" style="margin:8px 0 0">Di HP: tekan <b>Kirim / Bagikan</b> lalu pilih WhatsApp → grup. Di laptop: <b>Salin teks</b> lalu tempel di WhatsApp Web.</p>
+      </div>
+      <div class="card"><h2>Data pengantin</h2><dl class="kv">
+        ${kv("IG", o.ig)}${kv("TikTok", o.tiktok)}${kv("Bapak", o.bapak)}${kv("Ibu", o.ibu)}${kv("No. HP", o.hp)}${lokOf(o).map(l => kv(lokKe(o) ? `Lokasi ${esc(lokKe(o))}` : "Lokasi", [lokJudul(l) + ": " + lokJam(l).map(([n, j]) => [n, j].filter(x => isi(x)).join(" ")).join(", "), l.tempat, l.alamat, isi(l.maps) || "link lokasi belum ada"].filter(x => isi(x)).join("\n"))).join("")}${o.acaraMalam ? kv("Acara malam", "Ada") : ""}${kv("Paket", paketLabel(o))}
+        ${kv("Tim", teamOf(o).map(teamLine).join("\n"))}${(o.kotak || []).filter(b => lines(b.isi).length).map(b => kv(esc(b.judul || "Lainnya"), lines(b.isi).map(x => x.replace(BUL, "")).join("\n"))).join("")}</dl></div>
+    </div>
+    <div class="grid" style="align-content:start">
+${missing(o).length ? `      <div class="card" style="border-color:var(--warn)"><h2>Belum lengkap</h2><p class="small muted" style="margin:0 0 10px">Masih kosong: <b>${esc(missing(o).join(", "))}</b></p><a class="btn sm gold" href="#/acara/${esc(o.id)}/edit">${ic("edit")}Lengkapi</a></div>` : ""}
+      <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Tim & absen</h2><button class="btn sm gold noprint" data-act="pickteam-detail" data-id="${esc(o.id)}">${ic("users")}Atur tim</button></div>${crew.length ? `<div class="checks">${crew.map(t => `<label class="ck ${o.absen?.[t.id] ? "done" : ""}"><input type="checkbox" data-absen="${t.id}" ${o.absen?.[t.id] ? "checked" : ""}><div class="avatar" style="width:30px;height:30px;font-size:12px">${esc(t.nama[0])}</div><span>${esc(t.nama)}</span><span class="pill" style="margin-left:auto">${esc(t.peran)}</span></label>`).join("")}</div><div class="small muted" style="margin-top:6px">${crew.filter(x => o.absen?.[x.id]).length}/${crew.length} hadir</div>` : `<div class="muted small">Belum ada crew dipilih.</div>`}</div>
+      <div class="card"><h2>Cek perlengkapan</h2>${cl.length ? `<div class="cl-row small muted" style="font-weight:600"><span>Item</span><span style="text-align:center">Datang</span><span style="text-align:center">Pulang</span></div>${cl.map(x => `<div class="cl-row"><span>${esc(x)}</span><input type="checkbox" data-cek="${esc(x)}" data-k="d" ${o.cek?.[x]?.d ? "checked" : ""}><input type="checkbox" data-cek="${esc(x)}" data-k="p" ${o.cek?.[x]?.p ? "checked" : ""}></div>`).join("")}<div class="small muted" style="margin-top:8px">Datang ${cekDone}/${cl.length} · Pulang ${cekPulang}/${cl.length}</div>` : `<div class="muted small">Isi kotak “Perlengkapan dibawa” di form untuk membuat checklist.</div>`}</div>
+      <div class="row noprint"><button class="btn sm" data-act="pdf1" data-id="${esc(o.id)}">${ic("down")}Download PDF</button><button class="btn sm" data-act="selesai" data-id="${esc(o.id)}">${o.selesai ? "Kembalikan dari arsip" : `${ic("arsip")}Tandai selesai`}</button><button class="btn sm ${o.batal ? "" : "danger"}" data-act="batal" data-id="${esc(o.id)}">${o.batal ? "Aktifkan lagi" : "Tandai batal"}</button><button class="btn sm danger" data-act="del" data-id="${esc(o.id)}">${ic("trash")}Hapus</button></div>
+    </div>
+  </div>`;
+}
+function checklistItems(o) {
+  const set = new Set([...kisi(o, "perlengkapan").map(x => x.replace(/\.$/, "")), ...(o.tambahan || []).map(t => t.nama + (num(t.qty) > 1 ? " ×" + t.qty : ""))]);
+  return [...set].filter(Boolean);
+}
+
+/* ---------- FORM ---------- */
+let draft = null;
+function blankOrder() {
+  return { id: uid(), dibuat: Date.now(), tanggal: "", nama: "", ig: "", tiktok: "", bapak: "", ibu: "", hp: "", dsn: "", rt: "", rw: "", desa: "", kec: "", kab: "", lokasiAkad: "", jamAkad: "", jamResepsi: "", acaraMalam: false, lokasiKe: "", lokasi: null, kotak: null, paketMode: "", jenisAcara: "both", alamatLain: "", mapsLink: "", wilayahId: (db && db.wilayah[0]?.id) || "w1", paketId: "", paketNama: "", hargaPaket: 0, isiPaket: "", dekor: "", gaun: [{ baju: "", pasangan: "", hijab: "" }], gaunCatatan: "", melati: "", melatiReq: "", melatiHarga: 0, mc: "", foto: "", shot: "", hena: "", crew: [], tambahan: [], potongan: [], transport: 0, bayar: [], nb: "", jadwalMakeup: "", perlengkapan: "", batal: false, absen: {}, cek: {} };
+}
+const fi = (k, label, ph = "", type = "text", extra = "") => `<label class="f">${label}<input class="in" data-b="${k}" type="${type}" value="${esc(draft[k])}" placeholder="${esc(ph)}" ${extra}></label>`;
+const dl = (id, arr) => `<datalist id="${id}">${[...new Set(arr)].map(x => `<option value="${esc(x)}">`).join("")}</datalist>`;
+function vForm(id) {
+  if (!draft || draft._for !== (id || "new")) {
+    const src = id ? db.orders.find(o => o.id === id) : null;
+    if (id && !src) return `<div class="card empty">Data tidak ditemukan.</div>`;
+    draft = src ? JSON.parse(JSON.stringify(src)) : blankOrder(); draft._for = id || "new";
+  }
+  draft._open = draft._open || {}; ensureKotak(draft); if (!lokOf(draft).length) draft.lokasi = [newLok()];
+  const byRole = r => db.tim.filter(t => t.aktif !== false && t.peran === r).map(t => t.nama);
+  const has = (...k) => k.some(x => { const v = draft[x]; return Array.isArray(v) ? v.length : (typeof v === "number" ? v : String(v || "").trim()); });
+  // Bagian yang bisa dilipat: terbuka bila sudah ada isinya, atau sesuai pilihan terakhir pengguna
+  const sec = (key, n, t, body, open = true, hint = "") => `<details class="card fsec" data-sec="${key}" ${(draft._open[key] ?? open) ? "open" : ""}><summary class="hd"><span class="n">${n}</span><h2>${t}</h2>${hint ? `<span class="muted small hint">${hint}</span>` : ""}<svg class="i chev"><use href="#i-right"/></svg></summary>${body}</details>`;
+  return `${mtop()}<a class="back" href="${id ? "#/acara/" + id : "#/dashboard"}">${ic("left")}${id ? "Detail" : "Dashboard"}</a>
+  <div class="top"><div><h1>${id ? "Edit acara" : "Acara baru"}</h1><p>Isi yang perlu saja — sisanya bisa dilengkapi nanti.</p></div></div>
+  <form id="oform" autocomplete="off" onsubmit="return false">
+  ${sec("p", 1, "Pengantin", `<div class="fs"><div class="grid g3">${fi("nama", "Nama manten", "mis. Ana & Rois")}${fi("tanggal", "Tanggal acara", "", "date")}${fi("hp", "No. HP / WA", "08xx", "tel")}</div>
+    <div class="grid g4">${fi("ig", "IG manten", "@username")}${fi("tiktok", "TikTok", "@username")}${fi("bapak", "Bapak")}${fi("ibu", "Ibu")}</div></div>`)}
+  ${sec("a", 2, "Lokasi & jadwal acara", `<div id="lokasiBox">${lokasiFields()}</div>
+    <label class="toggle" style="margin-top:12px"><input type="checkbox" data-b="acaraMalam" ${draft.acaraMalam ? "checked" : ""}>Ada acara malam</label>
+    ${dl("dl-tempat", ["Kediaman mempelai wanita", "Kediaman mempelai pria", "Masjid", "Gedung", "KUA", ...db.orders.flatMap(o => lokOf(o).map(l => l.tempat)).filter(Boolean)])}`)}
+  ${sec("k", 3, "Paket & isi acara", `<div id="paketBox">${paketFields()}</div>`)}
+  ${sec("t", 4, "Tim bertugas", `<div id="timBox">${timFields()}</div>`)}
+  <div class="card fsec" id="hasilCard"><div class="hd"><span class="n">${ic("wa")}</span><h2>Hasil untuk grup WA</h2></div>
+    <div class="wa-prev"><div class="bubble" id="formWA"></div></div>
+    <div class="row" style="margin-top:12px"><button class="btn wa grow" type="button" data-act="formshare">${ic("share")}Kirim / Bagikan</button><button class="btn grow" type="button" data-act="formcopy">${ic("copy")}Salin teks</button></div>
+    <p class="small muted" style="margin:8px 0 0">Hasil ini ikut berubah saat Anda mengisi form. Jangan lupa <b>Simpan</b>.</p></div>
+  <div class="savebar"><div class="tot grow" id="totbox"></div><button class="btn" data-act="cancelform">Batal</button><button class="btn gold" data-act="saveform">${ic("check")}Simpan</button></div>
+  </form>`;
+}
+const groupBy = (arr, k) => arr.reduce((a, x) => ((a[x[k] || "Lainnya"] = a[x[k] || "Lainnya"] || []).push(x), a), {});
+const lin = (i, f, label, ph, extra = "") => `<label class="f">${label}<input class="in" data-lk="${i}.${f}" value="${esc(draft.lokasi[i][f] || "")}" placeholder="${esc(ph)}" ${extra}></label>`;
+function lokasiFields() {
+  const l = draft.lokasi[0], i = 0;
+  const lain = draft.tanggal ? db.orders.filter(o => o.id !== draft.id && !o.batal && o.tanggal === draft.tanggal) : [];
+  return `<div class="lok">
+    <div class="grid g3" style="margin-bottom:12px">
+      <label class="f">Lokasi ke- (isi manual)<input class="in" data-b="lokasiKe" inputmode="numeric" value="${esc(draft.lokasiKe || "")}" placeholder="${lain.length ? `mis. ${lain.length + 1}` : "mis. 1"}"></label>
+      <div class="f small muted" style="grid-column:span 2;justify-content:flex-end;padding-bottom:6px">${lain.length ? `Di tanggal ini sudah ada ${lain.length} acara lain: ${lain.map(o => `<b>${esc(o.nama)}</b>${lokKe(o) ? ` (Lokasi ${esc(lokKe(o))})` : ""}`).join(", ")}` : "Nomor urut pelanggan di hari yang sama (Lokasi 1, 2, 3…). Muncul di judul pesan grup."}</div>
+    </div>
+    <div class="chips" style="margin-bottom:12px">${LJENIS.map(([k, n]) => `<span class="chip ${l.jenis === k ? "on" : ""}" data-ljenis="${i}.${k}">${l.jenis === k ? ic("check") : ""}${n}</span>`).join("")}</div>
+    <div class="grid g3">
+      ${l.jenis === "lain" ? lin(i, "namaAcara", "Nama acara", "mis. Ngunduh mantu") + lin(i, "jam", "Jam", "mis. malam jam 7") : ""}
+      ${l.jenis === "both" || l.jenis === "akad" ? lin(i, "jamAkad", "Jam akad", "mis. pagi jam 7") : ""}
+      ${l.jenis === "both" || l.jenis === "resepsi" ? lin(i, "jamResepsi", "Jam resepsi", "mis. pagi jam 10") : ""}
+      ${l.jenis === "both" ? lin(i, "tempatAkad", "Tempat akad (kalau beda)", "mis. masjid") : ""}
+    </div>
+    <div class="grid g2" style="margin-top:12px">${lin(i, "tempat", "Tempat", "mis. Kediaman mempelai wanita", 'list="dl-tempat"')}${lin(i, "alamat", "Alamat", "mis. Desa Sawu RT 17 / RW 8, Dukun, Gresik")}</div>
+    <div class="row" style="align-items:flex-end;margin-top:12px">${lin(i, "maps", "Link Google Maps dari pelanggan — untuk sopir", "Tempel link yang dikirim pelanggan", 'type="url"').replace('class="f"', 'class="f grow"')}<button class="btn gold" type="button" data-act="pastemaps" data-li="${i}">${ic("copy")}Tempel</button><button class="btn" type="button" data-act="cekmaps" data-li="${i}">${ic("pin")}Cek</button></div>
+  </div>`;
+}
+/* Isi paket di Excel: "Judul\n• item\n\nJudul 2\n• item" */
+const BUL = /^[•\-*]\s?/;
+function parseIsi(text) {
+  return String(text || "").split(/\n\s*\n/).map(b => b.split("\n").map(x => x.trim()).filter(Boolean)).filter(b => b.length)
+    .map(b => { const head = BUL.test(b[0]) ? "" : b[0]; return { head, items: (head ? b.slice(1) : b).map(x => x.replace(BUL, "")) }; });
+}
+/* ---------- KOTAK: semua isian acara berupa kotak tulisan (1 baris = 1 item) ---------- */
+const KOTAK = [
+  ["gaun", "Gaun & busana", "Putih kebaya + Blangkon, (Hijab solo)\nNavy jarik + Blangkon, (Hijab solo)"],
+  ["melati", "Melati", "Solo putri (request monte silver + tutup sanggul)"],
+  ["dekor", "Dekor", "Pintu masuk\nTumbang"],
+  ["efek", "Efek & hiburan", "Hena + nail art\nMC"],
+  ["dok", "Dokumentasi & acara", "Foto 3 roll\nVideo cinematic"],
+  ["rias", "Rias pengantin", "Rias terima tamu 4 orang\nRias orang tua & besan"],
+  ["bunga", "Bunga", "Buket asli"],
+  ["perlengkapan", "Perlengkapan dibawa", "Terop VVIP 2 plong\nKursi 200 + bungkus\nKipas 2"],
+  ["makeup", "Jadwal make up", "Manten siap dimake up jam 2 pagi\nTerima tamu jam 5/6 pagi"],
+  ["nb", "Catatan (Nb)", "Ada prosesi injak telur\nPengapit cowok 1 & cewek 1"]
+];
+const PAKET_KEYS = ["dekor", "efek", "dok", "rias", "bunga", "perlengkapan"];
+const HEAD2KEY = { "dekor": "dekor", "efek & hiburan": "efek", "dokumentasi & acara": "dok", "rias pengantin": "rias", "bunga": "bunga", "perlengkapan": "perlengkapan" };
+const SPECIAL = ["gaun", "melati", "perlengkapan", "makeup", "nb"];
+const kot = (o, k) => (o.kotak || []).find(x => x.k === k);
+const kisi = (o, k) => lines((kot(o, k) || {}).isi).map(x => x.replace(BUL, ""));
+const otherBoxes = o => (o.kotak || []).filter(b => !SPECIAL.includes(b.k) && lines(b.isi).length);
+function ensureKotak(o) {
+  const old = Array.isArray(o.kotak) ? o.kotak : [];
+  const std = KOTAK.map(([k, j]) => old.find(x => x.k === k) || { k, judul: j, isi: "" });
+  o.kotak = [...std, ...old.filter(x => !KOTAK.some(([k]) => k === x.k))];
+  return o;
+}
+/* pindahkan isian lama (gaun, melati, dekor, isi paket, perlengkapan, nb, jadwal make up) ke kotak — sekali saja */
+function toKotak(o) {
+  if (Array.isArray(o.kotak)) return ensureKotak(o);
+  ensureKotak(o);
+  const set = (k, arr) => { const b = kot(o, k); b.isi = [...new Set([...lines(b.isi), ...arr.filter(Boolean)])].join("\n"); };
+  set("gaun", [...(o.gaun || []).filter(g => g.baju || g.pasangan).map(g => [g.baju, g.pasangan].filter(Boolean).join(" + ") + (g.hijab ? `, (${g.hijab})` : "")), o.gaunCatatan]);
+  if (String(o.melati || "").trim()) set("melati", [o.melati + (o.melatiReq ? ` (request ${o.melatiReq})` : "")]);
+  set("dekor", [o.dekor]);
+  parseIsi(o.isiPaket).forEach(b => {
+    const k = HEAD2KEY[b.head.toLowerCase()];
+    if (k) set(k, b.items); else o.kotak.push({ k: "c_" + uid(), judul: b.head || "Lainnya", isi: b.items.join("\n"), dariPaket: true });
+  });
+  set("perlengkapan", lines(o.perlengkapan));
+  set("makeup", lines(o.jadwalMakeup).map(x => x.replace(BUL, "")));
+  set("nb", lines(o.nb));
+  return o;
+}
+function fillFromPaket(o, p) {
+  clearPaket(o);
+  parseIsi(p.isi).forEach(b => {
+    const k = HEAD2KEY[b.head.toLowerCase()];
+    if (k) kot(o, k).isi = b.items.join("\n"); else o.kotak.push({ k: "c_" + uid(), judul: b.head || "Lainnya", isi: b.items.join("\n"), dariPaket: true });
+  });
+}
+function clearPaket(o) { ensureKotak(o); PAKET_KEYS.forEach(k => { kot(o, k).isi = ""; }); o.kotak = o.kotak.filter(b => !b.dariPaket); }
+const paketMode = o => o.paketMode || (paketById(o.paketId) ? "paket" : String(o.paketNama || "").trim() ? "custom" : "");
+/* Pilihan bantuan untuk tiap kotak, diambil dari database (paket Excel, perlengkapan, katalog) */
+function sectionCatalog() {
+  const m = new Map();
+  db.paket.forEach(p => parseIsi(p.isi).forEach(b => { const k = (b.head || "Lainnya").toLowerCase(); if (!m.has(k)) m.set(k, new Set()); b.items.forEach(x => m.get(k).add(x)); }));
+  return m;
+}
+const optList = (label, arr, pre = "n") => { arr = [...new Set(arr.filter(Boolean))]; return arr.length ? `<optgroup label="${esc(label)}">${arr.map(x => `<option value="${pre}|${esc(x)}">${esc(x)}</option>`).join("")}</optgroup>` : ""; };
+const addonLabel = a => /^Sewa \d/.test(a.kategori) ? `Terop ${a.item} (${a.kategori.replace(/^Sewa /, "")})` : a.item;
+function kotakOpts(b) {
+  const m = sectionCatalog(), K = db.katalog, from = h => [...(m.get(h) || [])];
+  const addon = kat => db.addons.filter(a => a.kategori !== "Biaya Tambahan" && (!kat || kat.includes(a.kategori))).map(addonLabel);
+  switch (b.k) {
+    case "gaun": return optList("Gaun (baris baru)", K.gaun) + optList("+ Pasangan (ke baris terakhir)", K.pasangan, "p") + optList("Hijab (ke baris terakhir)", K.hijab, "h");
+    case "melati": return optList("Jenis melati", K.melati) + optList("Request", ["request monte silver", "tutup sanggul", "ronce melati tibo dodo"], "r");
+    case "dekor": return optList("Dekor dari paket", from("dekor")) + optList("Paket tambahan", addon(["Paket Tambahan"]));
+    case "efek": return optList("Efek & hiburan dari paket", from("efek & hiburan"));
+    case "dok": return optList("Dokumentasi dari paket", from("dokumentasi & acara"));
+    case "rias": return optList("Rias dari paket", from("rias pengantin"));
+    case "bunga": return optList("Bunga dari paket", from("bunga"));
+    case "perlengkapan": return optList("Perlengkapan dari paket", from("perlengkapan")) + Object.entries(groupBy(db.addons.filter(a => a.kategori !== "Biaya Tambahan"), "kategori")).map(([k, arr]) => optList(k, arr.map(addonLabel))).join("");
+    case "makeup": return optList("Jadwal make up", K.makeup || []);
+    case "nb": return optList("Catatan yang sering dipakai", K.nb || []);
+    default: return [...m.entries()].map(([k, v]) => optList(k.replace(/\b\w/g, c => c.toUpperCase()), [...v])).join("") + optList("Perlengkapan & sewa", addon());
+  }
+}
+/* tambahkan pilihan ke kotak: baris baru, atau sambung ke baris terakhir (pasangan / hijab / request) */
+function applyOpt(b, val) {
+  const i = val.indexOf("|"), kind = val.slice(0, i), x = val.slice(i + 1), L = lines(b.isi);
+  if (kind === "n" || !L.length) L.push(kind === "p" ? x : kind === "h" ? `(${x})` : x);
+  else if (kind === "p") L[L.length - 1] += ` + ${x}`;
+  else if (kind === "h") L[L.length - 1] += `, (${x})`;
+  else if (kind === "r") L[L.length - 1] = /\(request /.test(L[L.length - 1]) ? L[L.length - 1].replace(/\)$/, ` + ${x})`) : L[L.length - 1] + ` (${x})`;
+  b.isi = L.join("\n");
+}
+function kotakFields() {
+  return draft.kotak.map((b, i) => { const std = KOTAK.find(([k]) => k === b.k); return `<div class="kotak ${lines(b.isi).length ? "isi" : ""}">
+    <div class="kotak-h">${std ? `<span>${esc(b.judul)}</span>` : `<input class="kh" data-kj="${i}" value="${esc(b.judul)}" placeholder="Nama kotak">`}<select class="kdd" data-kdd="${i}" title="Pilih dari database"><option value="">＋ Pilih</option>${kotakOpts(b)}</select>${std ? "" : `<button type="button" class="mx" title="Hapus kotak" data-delkotak="${i}">${ic("x")}</button>`}</div>
+    <textarea class="kt" rows="2" data-kotak="${i}" placeholder="${esc(std ? "mis. " + std[2].split("\n").join(" / ") : "Tulis isinya, 1 baris = 1 item")}">${esc(b.isi)}</textarea></div>`; }).join("");
+}
+function paketFields() {
+  const mode = paketMode(draft), sp = paketById(draft.paketId);
+  const val = mode === "paket" && sp ? sp.id : mode === "custom" ? "__custom" : "";
+  return `<div class="fs">
+    <div class="grid g2"><label class="f">Paket<select class="in" id="paketSel">
+      <option value="" ${val === "" ? "selected" : ""}>— Tanpa paket —</option>
+      <option value="__custom" ${val === "__custom" ? "selected" : ""}>✏️ Custom (isi sendiri)</option>
+      ${db.wilayah.map(w => `<optgroup label="${esc(w.nama)}">${db.paket.filter(p => p.wilayahId === w.id).map(p => `<option value="${p.id}" ${p.id === val ? "selected" : ""}>${esc(p.nama)}</option>`).join("")}</optgroup>`).join("")}
+    </select></label>
+    ${mode === "custom" ? fi("paketNama", "Nama paket (boleh kosong)", "mis. Paket custom") : sp ? `<div class="f small muted" style="justify-content:flex-end;padding-bottom:6px">Isi ${esc(sp.nama)} sudah masuk ke kotak di bawah — tinggal ubah yang beda. <button class="btn sm ghost" type="button" data-act="resetisi">Kembalikan isi asli</button></div>` : `<div class="f small muted" style="justify-content:flex-end;padding-bottom:6px">Pilih paket untuk mengisi kotak otomatis, atau langsung tulis di kotak.</div>`}</div>
+    <div class="kotak-grid" id="kotakBox">${kotakFields()}</div>
+    <div class="row"><button class="btn" type="button" data-act="addkotak">${ic("plus")}Tambah kotak</button></div></div>`;
+}
+function timFields() {
+  const team = teamOf(draft);
+  return `${team.length ? `<div class="team">${team.map(m => { const cf = conflicts(m.id, draft.tanggal, draft.id); return `<div class="tm"><div class="avatar">${esc(initials(m.nama))}</div><div class="grow" style="min-width:0"><div class="t">${esc(m.nama)}</div><div class="small muted">${esc(m.peran)}${m.hp ? " · " + esc(m.hp) : ""}${cf.length ? ` · <b style="color:var(--warn)">bentrok: ${esc(cf.map(x => x.nama).join(", "))}</b>` : ""}</div></div><button class="btn icon ghost danger" type="button" title="Hapus dari acara" data-uncrew="${m.id}">${ic("x")}</button></div>`; }).join("")}</div>` : `<div class="muted small" style="margin-bottom:6px">Belum ada tim dipilih.</div>`}
+  <div class="row" style="margin-top:12px"><button class="btn gold" type="button" data-act="pickteam">${ic("users")}Pilih tim${team.length ? ` (${team.length})` : ""}</button><button class="btn ghost" type="button" data-act="quickcrew">${ic("plus")}Orang baru</button></div>`;
+}
+/* Pemilih tim cepat: cari, saring per peran, centang, simpan (seperti versi lama) */
+function pickTeam(ids, tanggal, exceptId, onSave) {
+  const sel = new Set(ids); let q = "", role = "Semua";
+  const roles = ["Semua", ...ROLES.filter(r => db.tim.some(t => t.peran === r && t.aktif !== false))];
+  modal(`<h2>Pilih tim bertugas</h2>
+    <div class="search" style="margin-bottom:10px">${ic("search")}<input class="in" id="pq" placeholder="Cari nama…" autocomplete="off"></div>
+    <div class="tabs" id="pr">${roles.map(r => `<button type="button" class="tab ${r === role ? "on" : ""}" data-r="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+    <div id="pl" class="picklist"></div>
+    <div class="row" style="margin-top:12px"><b class="grow" id="pc"></b><button type="button" class="btn sm ghost" id="pall">Pilih semua</button><button type="button" class="btn sm ghost" id="pnone">Kosongkan</button></div>
+    <div class="row" style="margin-top:10px;justify-content:flex-end"><button type="button" class="btn" data-close>Batal</button><button type="button" class="btn gold" id="pok">${ic("check")}Simpan pilihan</button></div>`, (m, close) => {
+    const list = () => db.tim.filter(t => t.aktif !== false && (role === "Semua" || t.peran === role) && (!q || (t.nama + " " + t.peran).toLowerCase().includes(q))).sort((a, b) => roleIdx(a.peran) - roleIdx(b.peran));
+    const count = () => { $("#pc", m).textContent = `${sel.size} orang terpilih`; };
+    const draw = () => {
+      let last = "";
+      $("#pl", m).innerHTML = list().map(t => { const cf = conflicts(t.id, tanggal, exceptId); const hd = role === "Semua" && t.peran !== last ? `<div class="pick-h">${esc(last = t.peran)}</div>` : ""; return `${hd}<label class="pick ${sel.has(t.id) ? "on" : ""}"><input type="checkbox" value="${t.id}" ${sel.has(t.id) ? "checked" : ""}><div class="grow"><div class="t">${esc(t.nama)}</div><div class="small muted">${esc(t.peran)}${t.hp ? " · " + esc(t.hp) : ""}</div></div>${cf.length ? `<span class="pill warn" title="Sudah bertugas di ${esc(cf.map(x => x.nama).join(", "))}">bentrok</span>` : ""}</label>`; }).join("") || `<div class="empty small">Tidak ada yang cocok.</div>`;
+      count();
+    };
+    draw(); setTimeout(() => $("#pq", m).focus(), 50);
+    $("#pq", m).oninput = e => { q = e.target.value.toLowerCase().trim(); draw(); };
+    $("#pr", m).onclick = e => { const b = e.target.closest("[data-r]"); if (!b) return; role = b.dataset.r; $$("#pr .tab", m).forEach(x => x.classList.toggle("on", x === b)); draw(); };
+    $("#pl", m).onchange = e => { const v = e.target.value; e.target.checked ? sel.add(v) : sel.delete(v); e.target.closest(".pick").classList.toggle("on", e.target.checked); count(); };
+    $("#pall", m).onclick = () => { list().forEach(t => sel.add(t.id)); draw(); };
+    $("#pnone", m).onclick = () => { list().forEach(t => sel.delete(t.id)); draw(); };
+    $("#pok", m).onclick = () => { const keep = ids.filter(id => sel.has(id)), add = [...sel].filter(id => !ids.includes(id)); onSave([...keep, ...add]); close(); toast(`${sel.size} orang ditugaskan`); };
+  });
+}
+function updTotal() {
+  const el = $("#totbox"); if (!el) return; const m = missing(draft);
+  updatePreview();
+  el.innerHTML = m.length ? `<small>Belum diisi</small><b class="small" style="font-size:14px">${esc(m.join(", "))}</b>` : `<small>Status</small><b style="font-size:15px">Siap dikirim ke grup ✓</b>`;
+}
+let _pv = 0;
+function updatePreview() { clearTimeout(_pv); _pv = setTimeout(() => { const el = $("#formWA"); if (el && draft) el.innerHTML = waFmt(waCrew(draft)); }, 120); }
+function rerenderPart(id, fn) { const el = $("#" + id); if (el) { el.innerHTML = fn(); growAll(el); } if (draft) updatePreview(); }
+/* kotak isi paket ikut memanjang sesuai tulisan */
+const grow = el => { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; };
+const growAll = (root = document) => $$("textarea.kt", root).forEach(grow);
+function saveForm() {
+  if (!draft.nama.trim()) { toast("Isi nama manten dulu"); $('[data-b="nama"]')?.focus(); return; }
+  const o = JSON.parse(JSON.stringify(draft)); delete o._for; delete o._open;
+  const i = db.orders.findIndex(x => x.id === o.id);
+  if (i >= 0) db.orders[i] = o; else db.orders.push(o);
+  save(); draft = null; toast("Tersimpan"); location.hash = "#/acara/" + o.id;
+}
+
+/* ---------- CALENDAR ---------- */
+let calState = { y: new Date().getFullYear(), m: new Date().getMonth(), sel: todayStr() };
+function vKalender() {
+  const { y, m } = calState, first = new Date(y, m, 1), start = new Date(y, m, 1 - ((first.getDay() + 6) % 7));
+  const t = todayStr(), by = groupBy(activeOrders().filter(o => o.tanggal), "tanggal");
+  const days = Array.from({ length: 42 }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+  const selList = by[calState.sel] || [];
+  const monthList = sortByDate(activeOrders().filter(o => (o.tanggal || "").startsWith(`${y}-${pad(m + 1)}`)));
+  return `${mtop()}<div class="top"><div><h1>Kalender</h1><p>${monthList.length} acara di ${first.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</p></div>
+    <div class="row"><button class="btn icon" data-cal="-1">${ic("left")}</button><button class="btn sm" data-cal="0">Hari ini</button><button class="btn icon" data-cal="1">${ic("right")}</button><button class="btn" data-act="rekapbulan">${ic("wa")}Rekap bulan</button></div></div>
+  <div class="grid dash"><div class="card"><div class="cal">${["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(d => `<div class="dw">${d}</div>`).join("")}
+    ${days.map(d => { const k = ymd(d), ev = by[k] || []; return `<button class="d ${d.getMonth() !== m ? "out" : ""} ${k === t ? "today" : ""} ${k === calState.sel ? "sel" : ""}" data-day="${k}"><span class="num">${d.getDate()}</span>${ev.slice(0, 2).map(o => `<span class="nm">${esc(o.nama)}</span>`).join("")}<span class="dots">${ev.map(() => "<i></i>").join("")}</span></button>`; }).join("")}</div></div>
+    <div class="card"><h2>${fmtD(calState.sel, { weekday: "long", day: "numeric", month: "long" })}</h2>${selList.length ? selList.map(o => evRow(o)).join("") : `<div class="empty small">Tidak ada acara.<br><a class="btn sm gold" style="margin-top:10px" href="#/acara/baru?tgl=${calState.sel}">${ic("plus")}Buat acara di tanggal ini</a></div>`}</div></div>`;
+}
+
+/* ---------- TIM ---------- */
+function vTim() {
+  const t = todayStr();
+  const jobs = id => sortByDate(activeOrders().filter(o => (o.crew || []).includes(id)));
+  const byRole = groupBy(db.tim, "peran");
+  return `${mtop()}<div class="top"><div><h1>Tim</h1><p>Jadwal tugas tiap anggota tim</p></div><button class="btn gold" data-act="addtim">${ic("plus")}Anggota baru</button></div>
+  <div class="grid g2">${ROLES.filter(r => byRole[r]).map(r => `<div class="card"><h3>${r}</h3>${byRole[r].map(p => { const j = jobs(p.id), up = j.filter(o => o.tanggal >= t); return `<div class="li"><div class="avatar">${esc(p.nama[0] || "?")}</div><div class="grow"><div class="t">${esc(p.nama)} ${p.aktif === false ? '<span class="pill">nonaktif</span>' : ""}</div><div class="small muted">${up.length ? `Berikutnya: ${esc(up[0].nama)} · ${fmtD(up[0].tanggal, { day: "numeric", month: "short" })}` : "Belum ada jadwal"} · ${j.length} total tugas</div></div><button class="btn sm" data-act="timjobs" data-id="${p.id}">Jadwal</button><button class="btn icon ghost" data-act="edittim" data-id="${p.id}">${ic("edit")}</button></div>`; }).join("")}</div>`).join("")}</div>`;
+}
+function timModal(p) {
+  const isNew = !p; p = p || { id: uid(), nama: "", peran: "Crew Rias", hp: "", aktif: true };
+  modal(`<h2>${isNew ? "Anggota baru" : "Edit anggota"}</h2><div class="fs">
+    <label class="f">Nama<input class="in" id="tn" value="${esc(p.nama)}"></label>
+    <label class="f">Peran<select class="in" id="tr">${ROLES.map(r => `<option ${r === p.peran ? "selected" : ""}>${r}</option>`).join("")}</select></label>
+    <label class="f">No. HP<input class="in" id="th" type="tel" value="${esc(p.hp)}"></label>
+    <label class="toggle"><input type="checkbox" id="ta" ${p.aktif !== false ? "checked" : ""}>Aktif</label></div>
+    <div class="row" style="margin-top:16px">${isNew ? "" : `<button class="btn danger" id="tdel">${ic("trash")}Hapus</button>`}<span class="grow"></span><button class="btn" data-close>Batal</button><button class="btn gold" id="tsave">Simpan</button></div>`,
+    (m, close) => {
+      $("#tn", m).focus();
+      $("#tsave", m).onclick = () => { const nama = $("#tn", m).value.trim(); if (!nama) return toast("Nama wajib diisi"); Object.assign(p, { nama, peran: $("#tr", m).value, hp: $("#th", m).value.trim(), aktif: $("#ta", m).checked }); if (isNew) db.tim.push(p); save(); close(); toast("Tim tersimpan"); if (draft && location.hash.includes("acara")) { if (isNew && !draft.crew.includes(p.id)) draft.crew.push(p.id); rerenderPart("timBox", timFields); } else route(); };
+      $("#tdel", m) && ($("#tdel", m).onclick = async () => { close(); if (await confirmBox(`Hapus ${p.nama} dari tim?`)) { db.tim = db.tim.filter(x => x.id !== p.id); save(); route(); } });
+    });
+}
+
+/* ---------- SETTINGS ---------- */
+let setTab = "usaha";
+function vSettings() {
+  const T = [["usaha", "Usaha"], ["paket", "Paket"], ["addons", "Perlengkapan"], ["tim", "Tim"], ["katalog", "Katalog"], ["wa", "Template WA"], ["data", "Data & Backup"]];
+  let body = "";
+  const s = db.settings;
+  if (setTab === "usaha") body = `${installCard(true)}<div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Aplikasi</h2><span class="pill gold">Versi ${APP_VERSION}</span></div><p class="small muted" style="margin:8px 0 0">${isStandalone() ? "Terpasang sebagai aplikasi di perangkat ini ✓" : "Sedang dibuka lewat browser."} Data tersimpan di perangkat ini — rutin <a href="#/pengaturan" data-settab="data">backup</a>.</p></div><div class="card"><h2>Profil usaha</h2><div class="fs">
+    <div class="grid g2">${sIn("bizName", "Nama usaha")}${sIn("tagline", "Tagline")}</div>${sIn("alamat", "Alamat")}
+    <div class="grid g2">${sIn("hpOwner", "WA Owner")}${sIn("hpAdmin", "WA Admin")}</div><div class="grid g2">${sIn("ig", "Instagram")}${sIn("fb", "Facebook")}</div>
+
+    <div class="row"><img src="${esc(logoSrc())}" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--line)"><label class="btn sm">${ic("up")}Ganti logo<input type="file" accept="image/*" id="logoFile" hidden></label>${s.logo ? `<button class="btn sm ghost" data-act="logoreset">Pakai logo bawaan</button>` : ""}</div>
+    <label class="f">Tampilan<select class="in" data-s="theme">${[["auto", "Ikuti perangkat"], ["light", "Terang"], ["dark", "Gelap (hitam-emas)"]].map(([v, l]) => `<option value="${v}" ${s.theme === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div></div>`;
+  if (setTab === "paket") body = db.wilayah.map(w => `<div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">${esc(w.nama)}</h2><div class="row"><button class="btn sm ghost" data-act="editwil" data-id="${w.id}">${ic("edit")}Ganti nama</button><button class="btn sm" data-act="addpaket" data-id="${w.id}">${ic("plus")}Paket</button></div></div>
+    ${db.paket.filter(p => p.wilayahId === w.id).map(p => `<div class="li"><div class="grow"><div class="t">${esc(p.nama)}</div><div class="small muted">${esc(p.deskripsi || "")}</div></div><b>${rpShort(p.harga)}</b><button class="btn icon ghost" data-act="editpaket" data-id="${p.id}">${ic("edit")}</button></div>`).join("") || `<div class="muted small">Belum ada paket.</div>`}</div>`).join("") + `<button class="btn" data-act="addwil">${ic("plus")}Tambah wilayah</button>`;
+  if (setTab === "addons") body = `<div class="row" style="margin-bottom:12px"><button class="btn gold" data-act="addaddon">${ic("plus")}Item baru</button></div>` + Object.entries(groupBy(db.addons, "kategori")).map(([k, arr]) => `<div class="card" style="margin-bottom:14px"><h3>${esc(k)}</h3>${arr.map(a => `<div class="li"><div class="grow"><div class="t">${esc(a.item)}</div><div class="small muted">${esc([a.satuan, a.ket].filter(Boolean).join(" · "))}</div></div><b>${rp(a.harga)}</b><button class="btn icon ghost" data-act="editaddon" data-id="${a.id}">${ic("edit")}</button></div>`).join("")}</div>`).join("");
+  if (setTab === "tim") body = `<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Anggota tim (${db.tim.length})</h2><div class="row"><a class="btn sm" href="#/tim">${ic("cal")}Jadwal tim</a><button class="btn gold sm" data-act="addtim">${ic("plus")}Anggota</button></div></div>${db.tim.map(p => `<div class="li"><div class="avatar">${esc(p.nama[0] || "?")}</div><div class="grow"><div class="t">${esc(p.nama)}</div><div class="small muted">${esc(p.peran)}${p.hp ? " · " + esc(p.hp) : ""}${p.aktif === false ? " · nonaktif" : ""}</div></div><button class="btn icon ghost" data-act="edittim" data-id="${p.id}">${ic("edit")}</button></div>`).join("")}</div>`;
+  if (setTab === "katalog") body = `<div class="card"><h2>Pilihan cepat di form</h2><p class="small muted">Muncul di tombol <b>＋ Pilih</b> pada kotak-kotak form acara. Satu baris = satu pilihan.</p><div class="grid g2">${[["gaun", "Gaun"], ["pasangan", "Pasangan / aksesoris"], ["hijab", "Hijab / keterangan"], ["melati", "Jenis melati"], ["nb", "Catatan (Nb) yang sering dipakai"], ["makeup", "Jadwal make up yang sering dipakai"]].map(([k, l]) => `<label class="f">${l}<textarea class="in" rows="7" data-kat="${k}">${esc(db.katalog[k].join("\n"))}</textarea></label>`).join("")}</div></div>`;
+  if (setTab === "wa") body = `<div class="card" style="margin-bottom:14px"><h2>Bentuk pesan grup</h2><label class="f">Format<select class="in" data-s="waFormat"><option value="briefing" ${s.waFormat !== "klasik" ? "selected" : ""}>Briefing rapi ber-emoji (📅 ✨ 📍 👗 👥)</option><option value="klasik" ${s.waFormat === "klasik" ? "selected" : ""}>Klasik (*Nama* : … seperti pesan grup lama)</option></select></label></div><div class="card"><h2>Penutup pesan grup</h2><p class="small muted">Ditempel otomatis di bawah setiap pesan untuk grup kru. Pakai *tebal* dan _miring_ ala WhatsApp.</p><textarea class="in" rows="6" data-s="footer">${esc(s.footer)}</textarea>
+    <div class="hr"></div><h3>Kolom yang tampil di pesan grup (bawaan)</h3><div class="row" style="gap:16px">${WA_FIELDS.map(([k, l]) => `<label class="toggle"><input type="checkbox" data-wshow="${k}" ${s.waShow[k] ? "checked" : ""}>${l}</label>`).join("")}</div></div>`;
+  if (setTab === "data") body = `<div class="grid g2"><div class="card"><h2>Excel</h2><p class="small muted">File Excel rapi berisi sheet <b>Acara, Tim, Paket, Perlengkapan</b>. Bisa dibuka & diedit di Excel / Google Sheets, lalu di-import lagi. File <b>Database_Harvy_Wedding.xlsx</b> asli juga bisa di-import untuk memperbarui paket & perlengkapan.</p><div class="row"><button class="btn gold" data-act="exportxlsx">${ic("down")}Export ke Excel (.xlsx)</button><label class="btn">${ic("up")}Import dari Excel<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="importXlsx" hidden></label></div></div>
+    <div class="card"><h2>Backup</h2><p class="small muted">Simpan salinan semua data (acara, tim, paket, pengaturan) dalam satu file. Pakai untuk berjaga-jaga atau memindahkan data ke HP / iPad / laptop lain.${s.lastBackup ? `<br>Backup terakhir: <b>${esc(new Date(s.lastBackup).toLocaleString("id-ID"))}</b>` : "<br><b>Belum pernah backup.</b>"}</p><div class="row"><button class="btn gold" data-act="backup">${ic("down")}Download backup</button><label class="btn">${ic("up")}Pulihkan dari backup<input type="file" accept=".json,application/json" id="restore" hidden></label></div></div>
+    <div class="card"><h2>Ringkasan</h2><dl class="kv"><dt>Acara</dt><dd>${db.orders.length}</dd><dt>Paket</dt><dd>${db.paket.length}</dd><dt>Perlengkapan</dt><dd>${db.addons.length}</dd><dt>Tim</dt><dd>${db.tim.length}</dd><dt>Ukuran</dt><dd>${(JSON.stringify(db).length / 1024).toFixed(1)} KB</dd></dl></div>
+    <div class="card"><h2>Reset</h2><p class="small muted">Kembalikan database paket & perlengkapan dari Excel awal, atau hapus semua data.</p><div class="row"><button class="btn" data-act="resetdb">Reset paket & perlengkapan</button><button class="btn danger" data-act="wipe">${ic("trash")}Hapus semua</button></div></div></div>`;
+  return `${mtop()}<div class="top"><div><h1>Pengaturan</h1><p>Atur database, kru, template pesan & backup</p></div></div>
+  <div class="tabs">${T.map(([k, l]) => `<button class="tab ${setTab === k ? "on" : ""}" data-settab="${k}">${l}</button>`).join("")}</div>${body}`;
+}
+const sIn = (k, l) => `<label class="f">${l}<input class="in" data-s="${k}" value="${esc(db.settings[k])}"></label>`;
+function paketModal(p, wilId) {
+  const isNew = !p; p = p || { id: uid(), wilayahId: wilId, nama: "", harga: 0, deskripsi: "", isi: "", biayaTambahan: "", catatan: "" };
+  modal(`<h2>${isNew ? "Paket baru" : "Edit paket"}</h2><div class="fs">
+    <div class="grid g2"><label class="f">Nama paket<input class="in" id="pn" value="${esc(p.nama)}"></label><label class="f">Harga<input class="in" id="ph" data-money inputmode="numeric" value="${num(p.harga).toLocaleString("id-ID")}"></label></div>
+    <label class="f">Wilayah<select class="in" id="pw">${db.wilayah.map(w => `<option value="${w.id}" ${w.id === p.wilayahId ? "selected" : ""}>${esc(w.nama)}</option>`).join("")}</select></label>
+    <label class="f">Deskripsi singkat<input class="in" id="pd" value="${esc(p.deskripsi)}"></label>
+    <label class="f">Isi paket<textarea class="in" id="pi" rows="9">${esc(p.isi)}</textarea></label>
+    <label class="f">Biaya tambahan<textarea class="in" id="pb" rows="3">${esc(p.biayaTambahan)}</textarea></label>
+    <label class="f">Catatan / ketentuan<input class="in" id="pc" value="${esc(p.catatan)}"></label></div>
+    <div class="row" style="margin-top:16px">${isNew ? "" : `<button class="btn danger" id="pdel">${ic("trash")}Hapus</button>`}<span class="grow"></span><button class="btn" data-close>Batal</button><button class="btn gold" id="psave">Simpan</button></div>`,
+    (m, close) => {
+      $("#psave", m).onclick = () => { const nama = $("#pn", m).value.trim(); if (!nama) return toast("Nama paket wajib"); Object.assign(p, { nama, harga: num($("#ph", m).value), wilayahId: $("#pw", m).value, deskripsi: $("#pd", m).value, isi: $("#pi", m).value, biayaTambahan: $("#pb", m).value, catatan: $("#pc", m).value }); if (isNew) db.paket.push(p); save(); close(); route(); toast("Paket tersimpan"); };
+      $("#pdel", m) && ($("#pdel", m).onclick = async () => { close(); if (await confirmBox(`Hapus paket ${p.nama}?`)) { db.paket = db.paket.filter(x => x.id !== p.id); save(); route(); } });
+    });
+}
+function addonModal(a) {
+  const isNew = !a; a = a || { id: uid(), kategori: "Paket Tambahan", item: "", harga: 0, satuan: "", ket: "" };
+  const kats = [...new Set(db.addons.map(x => x.kategori))];
+  modal(`<h2>${isNew ? "Item baru" : "Edit item"}</h2><div class="fs">
+    <label class="f">Kategori<input class="in" id="ak" list="dl-kat" value="${esc(a.kategori)}">${dl("dl-kat", kats)}</label>
+    <label class="f">Nama item<input class="in" id="ai" value="${esc(a.item)}"></label>
+    <div class="grid g2"><label class="f">Harga<input class="in" id="ah" data-money inputmode="numeric" value="${num(a.harga).toLocaleString("id-ID")}"></label><label class="f">Satuan<input class="in" id="as" value="${esc(a.satuan)}" placeholder="per buah / per meter"></label></div>
+    <label class="f">Keterangan<input class="in" id="ax" value="${esc(a.ket)}"></label></div>
+    <div class="row" style="margin-top:16px">${isNew ? "" : `<button class="btn danger" id="adel">${ic("trash")}Hapus</button>`}<span class="grow"></span><button class="btn" data-close>Batal</button><button class="btn gold" id="asave">Simpan</button></div>`,
+    (m, close) => {
+      $("#asave", m).onclick = () => { const item = $("#ai", m).value.trim(); if (!item) return toast("Nama item wajib"); Object.assign(a, { kategori: $("#ak", m).value.trim() || "Lainnya", item, harga: num($("#ah", m).value), satuan: $("#as", m).value, ket: $("#ax", m).value }); if (isNew) db.addons.push(a); save(); close(); route(); toast("Item tersimpan"); };
+      $("#adel", m) && ($("#adel", m).onclick = async () => { close(); if (await confirmBox(`Hapus ${a.item}?`)) { db.addons = db.addons.filter(x => x.id !== a.id); save(); route(); } });
+    });
+}
+function promptModal(title, val, cb) {
+  modal(`<h2>${esc(title)}</h2><input class="in" id="pv" value="${esc(val)}"><div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" data-close>Batal</button><button class="btn gold" id="pok">Simpan</button></div>`,
+    (m, close) => { $("#pv", m).focus(); $("#pok", m).onclick = () => { const v = $("#pv", m).value.trim(); if (v) { cb(v); close(); } }; });
+}
+function download(name, data, type) {
+  const b = data instanceof Blob ? data : new Blob([data], { type }), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+/* ================= EXCEL & BACKUP ================= */
+const sv = v => v === null || v === undefined ? "" : String(v).trim();
+const yaTidak = v => /^(y|ya|yes|true|1|v|✓)/i.test(sv(v));
+const JENIS_LABEL = { "akad & resepsi": "both", "akad dan resepsi": "both", "akad": "akad", "resepsi": "resepsi" };
+const isiKotak = b => lines((b || {}).isi).map(x => x.replace(BUL, "")).join("\n");
+// Excel sering membuang angka 0 di depan nomor HP (0812… jadi 812…) — kembalikan
+const hpText = v => { const s = typeof v === "number" ? String(Math.round(v)) : sv(v); return /^8\d{7,12}$/.test(s) ? "0" + s : s; };
+/* Kolom sheet "Acara" — dipakai untuk export dan import (judul kolom = kunci) */
+function acaraCols() {
+  const L = o => lokOf(o)[0] || newLok();
+  const setL = (o, f, v) => { L(o); if (!lokOf(o).length) o.lokasi = [newLok()]; o.lokasi[0][f] = sv(v); };
+  return [
+    { h: "Tanggal", w: 12, type: "date", get: o => o.tanggal, set: (o, v) => { o.tanggal = XLSX.toYmd(v); } },
+    { h: "Hari", w: 9, get: o => o.tanggal ? fmtD(o.tanggal, { weekday: "long" }) : "" },
+    { h: "Lokasi ke", w: 8, get: o => lokKe(o), set: (o, v) => { o.lokasiKe = sv(v); } },
+    { h: "Nama manten", w: 22, get: o => o.nama, set: (o, v) => { o.nama = sv(v); } },
+    { h: "No HP", w: 15, get: o => o.hp, set: (o, v) => { o.hp = hpText(v); } },
+    { h: "IG", w: 18, get: o => o.ig, set: (o, v) => { o.ig = sv(v); } },
+    { h: "TikTok", w: 18, get: o => o.tiktok, set: (o, v) => { o.tiktok = sv(v); } },
+    { h: "Bapak", w: 16, get: o => o.bapak, set: (o, v) => { o.bapak = sv(v); } },
+    { h: "Ibu", w: 16, get: o => o.ibu, set: (o, v) => { o.ibu = sv(v); } },
+    { h: "Acara", w: 15, get: o => lokJudul(L(o)), set: (o, v) => { const k = JENIS_LABEL[sv(v).toLowerCase()]; setL(o, "jenis", k || (sv(v) ? "lain" : "both")); if (!k && sv(v)) o.lokasi[0].namaAcara = sv(v); } },
+    { h: "Jam akad", w: 13, get: o => L(o).jamAkad, set: (o, v) => setL(o, "jamAkad", v) },
+    { h: "Tempat akad (kalau beda)", w: 16, get: o => L(o).tempatAkad, set: (o, v) => setL(o, "tempatAkad", v) },
+    { h: "Jam resepsi", w: 13, get: o => L(o).jamResepsi, set: (o, v) => setL(o, "jamResepsi", v) },
+    { h: "Jam acara lain", w: 13, get: o => L(o).jenis === "lain" ? L(o).jam : "", set: (o, v) => setL(o, "jam", v) },
+    { h: "Tempat", w: 22, type: "wrap", get: o => L(o).tempat, set: (o, v) => setL(o, "tempat", v) },
+    { h: "Alamat", w: 34, type: "wrap", get: o => L(o).alamat, set: (o, v) => setL(o, "alamat", v) },
+    { h: "Link Google Maps", w: 30, get: o => L(o).maps, set: (o, v) => setL(o, "maps", ambilLink(v)) },
+    { h: "Acara malam", w: 10, get: o => o.acaraMalam ? "Ya" : "", set: (o, v) => { o.acaraMalam = yaTidak(v); } },
+    { h: "Wilayah paket", w: 14, get: o => { const p = paketById(o.paketId); return p && paketMode(o) === "paket" ? (wilById(p.wilayahId) || {}).nama || "" : ""; } },
+    { h: "Paket", w: 18, get: o => { const p = paketById(o.paketId); return p && paketMode(o) === "paket" ? p.nama : sv(o.paketNama); }, set: (o, v, rec) => {
+        const nama = sv(v), wil = sv(rec["Wilayah paket"]).toLowerCase();
+        const p = db.paket.find(x => x.nama.toLowerCase() === nama.toLowerCase() && (!wil || (wilById(x.wilayahId) || {}).nama?.toLowerCase() === wil)) || db.paket.find(x => x.nama.toLowerCase() === nama.toLowerCase());
+        if (p) Object.assign(o, { paketMode: "paket", paketId: p.id, paketNama: p.nama, wilayahId: p.wilayahId });
+        else Object.assign(o, { paketMode: nama ? "custom" : "", paketId: "", paketNama: nama });
+      } },
+    ...KOTAK.map(([k, j]) => ({ h: j, w: k === "gaun" ? 34 : 26, type: "wrap", get: o => isiKotak(kot(o, k)), set: (o, v) => { ensureKotak(o); kot(o, k).isi = sv(v); } })),
+    { h: "Kotak lain", w: 30, type: "wrap", get: o => (o.kotak || []).filter(b => !KOTAK.some(([k]) => k === b.k) && lines(b.isi).length).map(b => `${b.judul || "Lainnya"}:\n${isiKotak(b)}`).join("\n\n"),
+      set: (o, v) => { ensureKotak(o); o.kotak = o.kotak.filter(b => KOTAK.some(([k]) => k === b.k)); sv(v).split(/\n\s*\n/).forEach(bl => { const L2 = lines(bl); if (!L2.length) return; const head = /:$/.test(L2[0]) ? L2.shift().replace(/:$/, "") : "Lainnya"; o.kotak.push({ k: "c_" + uid(), judul: head, isi: L2.join("\n") }); }); } },
+    ...ROLES.map(r => ({ h: "Tim: " + r, w: 18, type: "wrap", role: r, get: o => teamOf(o).filter(t => t.peran === r).map(t => t.nama).join("\n") })),
+    { h: "Status", w: 14, get: o => statusOf(o)[0] },
+    { h: "Selesai (arsip)", w: 10, get: o => o.selesai ? "Ya" : "", set: (o, v) => { o.selesai = yaTidak(v); } },
+    { h: "Dibatalkan", w: 10, get: o => o.batal ? "Ya" : "", set: (o, v) => { o.batal = yaTidak(v); } },
+    { h: "ID (jangan diubah)", w: 16, get: o => o.id }
+  ];
+}
+const TIM_COLS = [["Peran", 14], ["Nama", 22], ["No HP", 16], ["Aktif", 8], ["ID (jangan diubah)", 16]];
+const PAKET_COLS = [["Wilayah", 14], ["Nama paket", 22], ["Harga", 14, "num"], ["Deskripsi", 30, "wrap"], ["Isi paket", 46, "wrap"], ["Biaya tambahan", 34, "wrap"], ["Catatan", 26, "wrap"], ["ID (jangan diubah)", 16]];
+const ADDON_COLS = [["Kategori", 18], ["Item", 26], ["Harga", 14, "num"], ["Satuan", 12], ["Keterangan", 30, "wrap"], ["ID (jangan diubah)", 16]];
+const toCols = arr => arr.map(([h, w, type]) => ({ h, w, type }));
+
+function exportExcel() {
+  if (!window.XLSX) return toast("Modul Excel belum termuat — muat ulang aplikasi");
+  const now = new Date(), A = acaraCols(), orders = sortByDate(db.orders.slice());
+  const sheets = [
+    { name: "Info", noFilter: true, noFreeze: true, cols: [{ h: "Keterangan", w: 26 }, { h: "Isi", w: 70, type: "wrap" }], rows: [
+      ["Aplikasi", db.settings.bizName + " — Organizer"], ["Diekspor", now.toLocaleString("id-ID")],
+      ["Jumlah acara", String(db.orders.length)], ["Jumlah tim", String(db.tim.length)], ["Jumlah paket", String(db.paket.length)], ["Jumlah perlengkapan", String(db.addons.length)],
+      ["Cara import", "Ubah data di sheet Acara / Tim / Paket / Perlengkapan, simpan, lalu buka aplikasi → Pengaturan → Data & Backup → Import dari Excel.\nJangan ubah judul kolom. Kolom “ID (jangan diubah)” dipakai untuk mencocokkan data; baris baru cukup dikosongkan ID-nya.\nKolom isi (Gaun, Dekor, dll.): 1 baris = 1 item (Alt+Enter untuk baris baru di Excel).\nKolom Tim: satu nama per baris."]] },
+    { name: "Acara", cols: A.map(({ h, w, type }) => ({ h, w, type })), rows: orders.map(o => A.map(c => c.get(o))) },
+    { name: "Tim", cols: toCols(TIM_COLS), rows: [...db.tim].sort((a, b) => roleIdx(a.peran) - roleIdx(b.peran)).map(t => [t.peran, t.nama, t.hp, t.aktif === false ? "Tidak" : "Ya", t.id]) },
+    { name: "Paket", cols: toCols(PAKET_COLS), rows: db.paket.map(p => [(wilById(p.wilayahId) || {}).nama || "", p.nama, num(p.harga), p.deskripsi, p.isi, p.biayaTambahan, p.catatan, p.id]) },
+    { name: "Perlengkapan", cols: toCols(ADDON_COLS), rows: db.addons.map(a => [a.kategori, a.item, num(a.harga), a.satuan, a.ket, a.id]) }
+  ];
+  download(`${db.settings.bizName} - Data ${todayStr()}.xlsx`, XLSX.build(sheets));
+  toast("File Excel diunduh");
+}
+
+/* rows → [{judul kolom: nilai}] dari sheet yang baris pertamanya judul kolom */
+function sheetRecords(rows, need) {
+  if (!rows || !rows.length) return null;
+  const hi = rows.findIndex(r => r && need.every(n => r.some(c => sv(c).toLowerCase() === n.toLowerCase())));
+  if (hi < 0) return null;
+  const head = rows[hi].map(sv);
+  return rows.slice(hi + 1).filter(r => r && r.some(c => sv(c))).map(r => Object.fromEntries(head.map((h, i) => [h, r[i]]).filter(([h]) => h)));
+}
+const findSheet = (S, re) => Object.keys(S).find(n => re.test(n));
+/* File Database_Harvy_Wedding.xlsx asli: sheet per wilayah + 5_Perlengkapan */
+function fromOriginalDb(S) {
+  const paket = [], wilayah = [], addons = [];
+  const LBL = [["Dekor", "Dekor"], ["Efek & Hiburan", "Efek & Hiburan"], ["Dokumentasi & Acara", "Dokumentasi & Acara"], ["Rias Pengantin", "Rias Pengantin"], ["Bunga", "Bunga"], ["Perlengkapan", "Perlengkapan"], ["Isi Paket Lainnya", "Lainnya"]];
+  Object.keys(S).forEach(name => {
+    const recs = sheetRecords(S[name], ["Nama Paket"]);
+    if (recs) {
+      const wn = name.replace(/^\d+_?/, "").replace(/_/g, " ").trim() || name;
+      const w = db.wilayah.find(x => x.nama.toLowerCase() === wn.toLowerCase()) || { id: uid(), nama: wn };
+      if (!wilayah.includes(w)) wilayah.push(w);
+      recs.forEach(r => { if (!sv(r["Nama Paket"])) return;
+        const isi = LBL.map(([col, lbl]) => { const L2 = lines(sv(r[col])).map(x => x.replace(/4\s*[–x×]\s*8/, "4 x 8")); return L2.length ? lbl + "\n" + L2.map(x => "• " + x.replace(BUL, "")).join("\n") : ""; }).filter(Boolean).join("\n\n");
+        const old = db.paket.find(x => x.wilayahId === w.id && x.nama.toLowerCase() === sv(r["Nama Paket"]).toLowerCase());
+        paket.push({ id: old ? old.id : uid(), wilayahId: w.id, nama: sv(r["Nama Paket"]), harga: num(r["Harga (Rp)"]), deskripsi: sv(r["Deskripsi"]), isi, biayaTambahan: sv(r["Biaya Tambahan"]), catatan: sv(r["Catatan / Ketentuan"]) });
+      });
+    }
+    const ar = sheetRecords(S[name], ["Kategori", "Item"]);
+    if (ar) ar.forEach(r => { if (!sv(r["Item"]) || /catatan/i.test(sv(r["Kategori"]))) return; const old = db.addons.find(x => x.item.toLowerCase() === sv(r["Item"]).toLowerCase() && x.kategori === sv(r["Kategori"])); addons.push({ id: old ? old.id : uid(), kategori: sv(r["Kategori"]), item: sv(r["Item"]), harga: num(r["Harga (Rp)"] ?? r["Harga"]), satuan: sv(r["Satuan"]), ket: sv(r["Keterangan"]) }); });
+  });
+  return { paket: paket.length ? paket : null, wilayah, addons: addons.length ? addons : null };
+}
+async function importExcel(file) {
+  let S;
+  try { S = await XLSX.read(file); } catch (e) { return toast(e.message || "File tidak bisa dibaca"); }
+  const A = acaraCols(), ID = "ID (jangan diubah)";
+  const acara = sheetRecords(S[findSheet(S, /^acara$/i)], ["Nama manten"]);
+  const tim = sheetRecords(S[findSheet(S, /^tim$/i)], ["Peran", "Nama"]);
+  let paketRecs = sheetRecords(S[findSheet(S, /^paket$/i)], ["Nama paket", "Isi paket"]);
+  let addonRecs = sheetRecords(S[findSheet(S, /^perlengkapan$/i)], ["Kategori", "Item"]);
+  let paket = null, wilayah = null, addons = null, asal = "app";
+  if (paketRecs) { wilayah = []; paket = paketRecs.filter(r => sv(r["Nama paket"])).map(r => { const wn = sv(r["Wilayah"]) || "Lainnya"; let w = wilayah.find(x => x.nama.toLowerCase() === wn.toLowerCase()) || db.wilayah.find(x => x.nama.toLowerCase() === wn.toLowerCase()); if (!w) w = { id: uid(), nama: wn }; if (!wilayah.includes(w)) wilayah.push(w); const id = sv(r[ID]); return { id: db.paket.some(p => p.id === id) || /^[\w-]+$/.test(id) ? id || uid() : uid(), wilayahId: w.id, nama: sv(r["Nama paket"]), harga: num(r["Harga"]), deskripsi: sv(r["Deskripsi"]), isi: sv(r["Isi paket"]), biayaTambahan: sv(r["Biaya tambahan"]), catatan: sv(r["Catatan"]) }; }); }
+  if (addonRecs) addons = addonRecs.filter(r => sv(r["Item"])).map(r => { const id = sv(r[ID]); return { id: /^[\w-]+$/.test(id) ? id : uid(), kategori: sv(r["Kategori"]) || "Lainnya", item: sv(r["Item"]), harga: num(r["Harga"]), satuan: sv(r["Satuan"]), ket: sv(r["Keterangan"]) }; });
+  if (!acara && !tim && !paket && !addons) { const o = fromOriginalDb(S); paket = o.paket; wilayah = o.wilayah; addons = o.addons; asal = "database"; }
+  if (!acara && !tim && !paket && !addons) return toast("Tidak ada sheet yang dikenali (Acara / Tim / Paket / Perlengkapan)");
+  const acaraBaru = (acara || []).filter(r => sv(r["Nama manten"]) && !db.orders.some(o => o.id === sv(r[ID]))).length, acaraUbah = (acara || []).filter(r => db.orders.some(o => o.id === sv(r[ID]))).length;
+  const timBaru = (tim || []).filter(r => sv(r["Nama"]) && !db.tim.some(t => t.id === sv(r[ID]) || normNama(t.nama) === normNama(r["Nama"]))).length, timUbah = (tim || []).length - timBaru;
+  const opt = (id, on, judul, ket) => `<label class="ck" style="align-items:flex-start"><input type="checkbox" id="${id}" ${on ? "checked" : ""}><span><b>${judul}</b><br><span class="small muted">${ket}</span></span></label>`;
+  modal(`<h2>Import dari Excel</h2><p class="small muted" style="margin-top:-6px">${esc(file.name)}${asal === "database" ? " — dikenali sebagai file Database (paket & perlengkapan)" : ""}</p><div class="checks">
+    ${acara ? opt("imA", true, `Acara: ${acaraBaru} baru, ${acaraUbah} diperbarui`, "Acara yang ID-nya cocok diperbarui, sisanya ditambahkan. Acara lain di aplikasi tidak dihapus.") : ""}
+    ${tim ? opt("imT", true, `Tim: ${timBaru} baru, ${timUbah} diperbarui`, "Nama, peran, no HP & status aktif.") : ""}
+    ${paket ? opt("imP", true, `Paket: ${paket.length} paket (${wilayah.length} wilayah)`, "Daftar paket di aplikasi diganti dengan isi file.") : ""}
+    ${addons ? opt("imD", true, `Perlengkapan: ${addons.length} item`, "Daftar perlengkapan di aplikasi diganti dengan isi file.") : ""}
+    </div><p class="small muted">Saran: download backup dulu sebelum import.</p>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" data-close>Batal</button><button class="btn gold" id="imGo">${ic("up")}Import</button></div>`, (m, close) => {
+    $("#imGo", m).onclick = () => {
+      const on = id => $("#" + id, m)?.checked; const hasil = [];
+      if (paket && on("imP")) { wilayah.forEach(w => { if (!db.wilayah.some(x => x.id === w.id)) db.wilayah.push(w); }); db.paket = paket; hasil.push(`${paket.length} paket`); }
+      if (addons && on("imD")) { db.addons = addons; hasil.push(`${addons.length} perlengkapan`); }
+      if (tim && on("imT")) { tim.forEach(r => { if (!sv(r["Nama"])) return; const id = sv(r[ID]); let t = db.tim.find(x => x.id === id) || db.tim.find(x => normNama(x.nama) === normNama(r["Nama"])); if (!t) { t = { id: uid(), nama: "", peran: "Lainnya", hp: "", aktif: true }; db.tim.push(t); } Object.assign(t, { nama: sv(r["Nama"]), peran: ROLES.includes(sv(r["Peran"])) ? sv(r["Peran"]) : "Lainnya", hp: hpText(r["No HP"]), aktif: !/^t/i.test(sv(r["Aktif"])) }); }); hasil.push(`${tim.length} anggota tim`); }
+      if (acara && on("imA")) {
+        let n = 0;
+        acara.forEach(rec => {
+          if (!sv(rec["Nama manten"]) && !sv(rec[ID])) return;
+          let o = db.orders.find(x => x.id === sv(rec[ID])); const baru = !o;
+          if (!o) { o = blankOrder(); if (/^[\w-]+$/.test(sv(rec[ID]))) o.id = sv(rec[ID]); }
+          toKotak(o); toLokasi(o); ensureKotak(o);
+          A.forEach(c => { if (c.set && c.h in rec) c.set(o, rec[c.h], rec); });
+          const roleCols = A.filter(c => c.role && c.h in rec);
+          if (roleCols.length) {
+            o.crew = [];
+            roleCols.forEach(c => lines(sv(rec[c.h]).replace(/,/g, "\n")).forEach(nama => { let t = db.tim.find(x => normNama(x.nama) === normNama(nama)); if (!t) { t = { id: uid(), nama, peran: c.role, hp: "", aktif: true }; db.tim.push(t); } if (!o.crew.includes(t.id)) o.crew.push(t.id); }));
+          }
+          if (baru) db.orders.push(o); n++;
+        });
+        hasil.push(`${n} acara`);
+      }
+      canonTim(db); save(); close(); route(); toast(hasil.length ? "Berhasil import: " + hasil.join(", ") : "Tidak ada yang di-import");
+    };
+  });
+}
+
+function backupData() {
+  const now = new Date();
+  const isi = { aplikasi: "Harvy Wedding Organizer", jenis: "backup", format: 2, dibuat: now.toISOString(), dibuatTeks: now.toLocaleString("id-ID"),
+    ringkasan: { acara: db.orders.length, tim: db.tim.length, paket: db.paket.length, perlengkapan: db.addons.length }, data: db };
+  download(`Backup ${db.settings.bizName} ${todayStr()} ${pad(now.getHours())}.${pad(now.getMinutes())}.json`, JSON.stringify(isi, null, 2), "application/json");
+  db.settings.lastBackup = now.toISOString(); save();
+  toast("Backup diunduh — simpan file ini di tempat aman");
+}
+async function restoreData(file) {
+  let j; try { j = JSON.parse(await file.text()); } catch { return toast("File backup tidak valid"); }
+  const d = j && j.data && j.data.orders ? j.data : j;
+  if (!d || !Array.isArray(d.orders) || !d.settings) return toast("Ini bukan file backup aplikasi ini");
+  const kapan = j.dibuat ? new Date(j.dibuat).toLocaleString("id-ID") : "tidak diketahui (format lama)";
+  modal(`<h2>Pulihkan backup</h2><dl class="kv"><dt>File</dt><dd>${esc(file.name)}</dd><dt>Dibuat</dt><dd>${esc(kapan)}</dd><dt>Isi</dt><dd>${d.orders.length} acara · ${(d.tim || []).length} tim · ${(d.paket || []).length} paket · ${(d.addons || []).length} perlengkapan</dd><dt>Di perangkat ini</dt><dd>${db.orders.length} acara · ${db.tim.length} tim</dd></dl>
+    <div class="checks" style="margin-top:12px">
+      <label class="ck" style="align-items:flex-start"><input type="radio" name="rmode" value="gabung" checked><span><b>Gabungkan</b><br><span class="small muted">Tambahkan acara, tim, paket & perlengkapan yang belum ada. Data di perangkat ini tidak diubah.</span></span></label>
+      <label class="ck" style="align-items:flex-start"><input type="radio" name="rmode" value="ganti"><span><b>Ganti semua</b><br><span class="small muted">Semua data di perangkat ini diganti isi backup (untuk pindah HP / laptop).</span></span></label></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" data-close>Batal</button><button class="btn gold" id="rGo">Pulihkan</button></div>`, (m, close) => {
+    $("#rGo", m).onclick = () => {
+      const mode = $('input[name="rmode"]:checked', m).value;
+      const b = migrate(JSON.parse(JSON.stringify(d))); b.orders.forEach(o => { toKotak(o); toLokasi(o); });
+      if (mode === "ganti") db = b;
+      else {
+        let n = 0;
+        b.wilayah.forEach(w => { if (!db.wilayah.some(x => x.id === w.id)) db.wilayah.push(w); });
+        b.paket.forEach(p => { if (!db.paket.some(x => x.id === p.id)) db.paket.push(p); });
+        b.addons.forEach(a => { if (!db.addons.some(x => x.id === a.id)) db.addons.push(a); });
+        const peta = {}; b.tim.forEach(t => { const ada = db.tim.find(x => x.id === t.id || normNama(x.nama) === normNama(t.nama)); if (ada) peta[t.id] = ada.id; else db.tim.push(t); });
+        b.orders.forEach(o => { if (db.orders.some(x => x.id === o.id)) return; o.crew = (o.crew || []).map(id => peta[id] || id); db.orders.push(o); n++; });
+        canonTim(db); toast(`${n} acara ditambahkan dari backup`);
+      }
+      save(); applyTheme(); close(); route(); if (mode === "ganti") toast("Data berhasil dipulihkan");
+    };
+  });
+}
+
+/* ---------- ARSIP: acara yang sudah lewat / ditandai selesai / batal ---------- */
+const isArsip = o => !!(o.selesai || o.batal || (o.tanggal && o.tanggal < todayStr()));
+let arsipState = { q: "", sel: new Set(), bulan: "" };
+function vArsip() {
+  const st = arsipState, q = st.q.toLowerCase().trim();
+  let arr = db.orders.filter(isArsip);
+  const bulanList = [...new Set(arr.map(o => (o.tanggal || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+  if (st.bulan) arr = arr.filter(o => (o.tanggal || "").startsWith(st.bulan));
+  if (q) arr = arr.filter(o => [o.nama, alamatStr(o), o.hp, teamOf(o).map(x => x.nama).join(" ")].join(" ").toLowerCase().includes(q));
+  sortByDate(arr).reverse();
+  st.sel = new Set([...st.sel].filter(id => db.orders.some(o => o.id === id && isArsip(o))));
+  const groups = {}; arr.forEach(o => { const k = o.tanggal ? o.tanggal.slice(0, 7) : "zz"; (groups[k] = groups[k] || []).push(o); });
+  const nSel = st.sel.size, semua = arr.length && arr.every(o => st.sel.has(o.id));
+  const row = o => { const d = parseD(o.tanggal), on = st.sel.has(o.id); return `<div class="arow ${on ? "on" : ""}"><label class="acheck"><input type="checkbox" data-asel="${esc(o.id)}" ${on ? "checked" : ""}></label>
+    <a class="ev grow" href="#/acara/${esc(o.id)}"><div class="date ${d ? "" : "none"}">${d ? `<small>${d.toLocaleDateString("id-ID", { month: "short" })}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString("id-ID", { weekday: "short" })}</small>` : `<b>?</b><small>tgl</small>`}</div>
+    <div class="grow" style="min-width:0"><div class="t">${esc(o.nama || "Tanpa nama")}</div><div class="m"><span>${ic("pin")}${esc(alamatStr(o) || "-")}</span><span>${ic("users")}${teamOf(o).length} orang</span></div></div>
+    <div class="r">${o.batal ? `<span class="pill bad">Batal</span>` : `<span class="pill ok">Selesai</span>`}</div></a></div>`; };
+  return `${mtop()}<div class="top"><div><h1>Arsip</h1><p>${db.orders.filter(isArsip).length} acara selesai / batal — bisa di-download PDF atau dihapus</p></div></div>
+  <div class="row" style="margin-bottom:12px"><div class="search">${ic("search")}<input class="in" id="aq" placeholder="Cari nama, alamat, tim…" value="${esc(st.q)}"></div>
+    <select class="in" id="abulan" style="width:auto;min-width:170px"><option value="">Semua bulan</option>${bulanList.map(b => `<option value="${b}" ${b === st.bulan ? "selected" : ""}>${parseD(b + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</option>`).join("")}</select></div>
+  <div class="card abar"><label class="toggle"><input type="checkbox" id="aall" ${semua ? "checked" : ""}>Pilih semua (${arr.length})</label><b class="grow small">${nSel} dipilih</b>
+    <button class="btn sm gold" data-act="apdf" ${nSel ? "" : "disabled"}>${ic("down")}PDF</button><button class="btn sm danger" data-act="adel" ${nSel ? "" : "disabled"}>${ic("trash")}Hapus</button></div>
+  <div id="alist">${arr.length ? Object.keys(groups).sort().reverse().map(k => `<div class="month-h"><span>${k === "zz" ? "Tanpa tanggal" : parseD(k + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</span><button class="btn sm ghost" data-abulanpilih="${k}">Pilih bulan ini</button></div><div class="card" style="padding:6px">${groups[k].map(row).join("")}</div>`).join("") : `<div class="card empty">${ic("arsip")}<div>Belum ada acara di arsip.</div><div class="small">Acara otomatis masuk ke sini setelah tanggalnya lewat, atau saat ditandai selesai / batal.</div></div>`}</div>`;
+}
+
+/* ---------- PDF laporan acara (kop surat + ringkasan + rincian) ---------- */
+async function logoJpeg() {
+  try {
+    const src = db.settings.logo && db.settings.logo.startsWith("data:image/jpeg") ? db.settings.logo : null;
+    if (src) { const bin = atob(src.split(",")[1]); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+    return new Uint8Array(await (await fetch(LOGO_DEFAULT)).arrayBuffer());
+  } catch { return null; }
+}
+function pdfAcara(list, judul, logo) {
+  if (!window.PDF) { toast("Modul PDF belum termuat — muat ulang aplikasi"); return null; }
+  const s = db.settings, d = PDF.create(), M = 42, CW = d.PW - M * 2, LAB = 118;
+  const INK = [27, 25, 22], MUT = [110, 102, 90], GOLD = [176, 131, 47], GOLDD = [138, 100, 32], SOFT = [247, 240, 225], ZEB = [251, 249, 245], LINE = [226, 218, 203], DARK = [24, 22, 18];
+  const img = logo ? d.addJpeg(logo) : null;
+  const now = new Date(), noDok = `${list.length > 1 ? "ARS" : "ACR"}/${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}/${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const tgl = list.map(o => o.tanggal).filter(Boolean).sort();
+  const pend = { day: "numeric", month: "short", year: "numeric" };
+  const periode = tgl.length ? (tgl[0] === tgl.at(-1) ? fmtD(tgl[0], { day: "numeric", month: "long", year: "numeric" }) : `${fmtD(tgl[0], pend)} – ${fmtD(tgl.at(-1), pend)}`) : "-";
+  const kontak = [s.hpOwner && "WA Owner " + s.hpOwner, s.hpAdmin && "Admin " + s.hpAdmin, s.ig && "IG @" + String(s.ig).replace(/^@/, "")].filter(Boolean).join("   •   ");
+  d.title = judul;
+  let y = 0;
+  const kopBesar = () => {
+    if (img) { d.rrect(M - 2, 30, 66, 66, 33, null, GOLD, 1.2); d.image(M + 1, 33, 60, 60, img, { circle: true }); }
+    const x = M + (img ? 78 : 0);
+    d.text(x, 34, s.bizName.toUpperCase(), { size: 20, bold: true, color: INK, spacing: 0.6 });
+    d.text(x, 58, s.tagline || "Profesional Makeup & Wedding Planner", { size: 10, italic: true, color: GOLDD });
+    if (s.alamat) d.text(x, 73, d.fit(s.alamat, 8.5, false, CW - (x - M)), { size: 8.5, color: MUT });
+    if (kontak) d.text(x, 85, d.fit(kontak, 8.5, false, CW - (x - M)), { size: 8.5, color: MUT });
+    d.rect(M, 104, CW, 2.2, GOLD); d.rect(M, 108.5, CW, 0.6, GOLD);
+    y = 124;
+  };
+  const kopKecil = () => {
+    if (img) d.image(M, 22, 24, 24, img, { circle: true });
+    const x = M + (img ? 32 : 0);
+    d.text(x, 25, s.bizName.toUpperCase(), { size: 10.5, bold: true, color: INK, spacing: 0.4 });
+    d.text(x, 38, s.tagline || "", { size: 7.5, italic: true, color: GOLDD });
+    d.text(M + CW, 25, judul, { size: 8.5, bold: true, color: MUT, align: "right" });
+    d.text(M + CW, 38, "No. " + noDok, { size: 7.5, color: MUT, align: "right" });
+    d.rect(M, 54, CW, 1.4, GOLD);
+    y = 70;
+  };
+  const newPage = () => { d.addPage(); kopKecil(); };
+  const need = h => { if (y + h > d.PH - 64) newPage(); };
+  const sectionTitle = t => { need(30); d.text(M, y, t.toUpperCase(), { size: 8, bold: true, color: GOLDD, spacing: 0.8 }); d.line(M, y + 12, M + CW, y + 12, LINE, 0.6); y += 18; };
+  let zebra = false;
+  const row = (label, value, o = {}) => {
+    const val = String(value ?? "").trim(); if (!val) return;
+    const L = d.wrap(val, 9.3, false, CW - LAB - 16), h = L.length * 12.5 + 8;
+    need(Math.min(h, 70));
+    const hh = Math.min(h, d.PH - 64 - y);
+    if (zebra) d.rect(M, y, CW, hh, ZEB); zebra = !zebra;
+    d.text(M + 8, y + 4.5, label, { size: 8.3, bold: true, color: MUT });
+    let yy = y + 4;
+    L.forEach((ln, i) => {
+      if (yy + 12.5 > d.PH - 64) { y = yy; newPage(); yy = y + 4; }
+      d.text(M + LAB, yy, ln, { size: 9.3, color: o.link ? [29, 78, 216] : INK });
+      if (o.link && i === 0) d.link(M + LAB, yy, Math.min(CW - LAB, d.width(ln, 9.3)), 12, o.link);
+      yy += 12.5;
+    });
+    y = yy + 4; d.line(M, y, M + CW, y, LINE, 0.4);
+  };
+  const pill = (xRight, yy, text, fg, bg) => { const w = d.width(text, 7.5, true) + 14; d.rrect(xRight - w, yy, w, 15, 7.5, bg); d.text(xRight - w / 2, yy + 4, text, { size: 7.5, bold: true, color: fg, align: "center" }); return w; };
+  const statusOf2 = o => o.batal ? ["BATAL", [176, 64, 44], [249, 226, 220]] : isArsip(o) ? ["SELESAI", [37, 110, 66], [223, 240, 228]] : ["TERJADWAL", GOLDD, SOFT];
+
+  // ---------- halaman 1: kop + judul dokumen ----------
+  kopBesar();
+  d.text(d.PW / 2, y, (list.length > 1 ? "ARSIP DATA ACARA PERNIKAHAN" : "DATA ACARA PERNIKAHAN"), { size: 13, bold: true, color: INK, align: "center", spacing: 1 });
+  d.text(d.PW / 2, y + 18, `No. ${noDok}`, { size: 8.5, color: MUT, align: "center" });
+  y += 40;
+  // info dokumen
+  const info = [["Periode acara", periode], ["Jumlah acara", `${list.length} acara`], ["Dicetak", `${now.toLocaleDateString("id-ID", pend)}, ${pad(now.getHours())}.${pad(now.getMinutes())}`]];
+  d.rrect(M, y, CW, 50, 6, SOFT);
+  info.forEach(([k, v], i) => { const x = M + 14 + i * (CW / 3); d.text(x, y + 11, k.toUpperCase(), { size: 7, bold: true, color: GOLDD, spacing: 0.6 }); d.text(x, y + 25, d.fit(v, 9.5, true, CW / 3 - 20), { size: 9.5, bold: true, color: INK }); });
+  y += 66;
+
+  // ---------- ringkasan (tabel) ----------
+  if (list.length > 1) {
+    sectionTitle("Ringkasan");
+    const C = [[24, "No"], [80, "Tanggal"], [126, "Nama manten"], [146, "Lokasi"], [52, "Tim"], [83, "Status"]];
+    const head = () => { d.rect(M, y, CW, 18, DARK); let x = M; C.forEach(([w, h]) => { d.text(x + 6, y + 5, h, { size: 8, bold: true, color: [236, 211, 155] }); x += w; }); y += 18; };
+    head();
+    list.forEach((o, i) => {
+      if (y + 18 > d.PH - 64) { newPage(); head(); }
+      if (i % 2) d.rect(M, y, CW, 18, ZEB);
+      const [st, fg] = statusOf2(o), cells = [String(i + 1), o.tanggal ? fmtD(o.tanggal, { day: "2-digit", month: "short", year: "numeric" }) : "-", o.nama || "-", lokTempat(lokOf(o)[0] || {}) || "-", `${teamOf(o).length} orang`, st];
+      let x = M; C.forEach(([w], ci) => { d.text(x + 6, y + 5, d.fit(cells[ci], 8.5, ci === 2 || ci === 5, w - 10), { size: 8.5, bold: ci === 2 || ci === 5, color: ci === 5 ? fg : INK }); x += w; });
+      y += 18; d.line(M, y, M + CW, y, LINE, 0.4);
+    });
+    y += 20;
+  }
+
+  // ---------- rincian tiap acara ----------
+  list.forEach((o, n) => {
+    if (list.length > 1 || n > 0) need(150);
+    const l = lokOf(o)[0] || {}, team = teamOf(o), [st, fg, bg] = statusOf2(o);
+    // judul acara
+    d.rect(M, y, CW, 34, DARK);
+    d.rrect(M + 10, y + 8, 26, 18, 4, GOLD);
+    d.text(M + 23, y + 12, String(n + 1).padStart(2, "0"), { size: 9, bold: true, color: [255, 255, 255], align: "center" });
+    d.text(M + 46, y + 7, d.fit(o.nama || "Tanpa nama", 13, true, CW - 230), { size: 13, bold: true, color: [255, 255, 255] });
+    d.text(M + 46, y + 22, o.tanggal ? fmtD(o.tanggal) : "Tanggal belum ada", { size: 8.5, color: [214, 200, 170] });
+    const pw = pill(M + CW - 10, y + 10, st, fg, bg);
+    if (lokKe(o)) pill(M + CW - 16 - pw, y + 10, "LOKASI " + lokKe(o), GOLDD, SOFT);
+    y += 44; zebra = false;
+
+    sectionTitle("Jadwal & lokasi");
+    row("Acara", lokJam(l).map(([nm, j]) => [nm, j].filter(x => String(x || "").trim()).join(" ")).join("\n") + (o.acaraMalam ? "\nAda acara malam" : ""));
+    row("Tempat", l.tempat); row("Alamat", l.alamat);
+    if (isi(l.maps)) row("Google Maps", l.maps, { link: l.maps });
+    y += 8; zebra = false;
+
+    sectionTitle("Data pengantin");
+    row("No. HP / WA", o.hp); row("Instagram", o.ig); row("TikTok", o.tiktok);
+    row("Orang tua", [isi(o.bapak) && "Bpk. " + o.bapak, isi(o.ibu) && "Ibu " + o.ibu].filter(Boolean).join("  &  "));
+    y += 8; zebra = false;
+
+    const boxes = (o.kotak || []).filter(b => lines(b.isi).length);
+    if (boxes.length || paketLabel(o) !== "-") {
+      sectionTitle("Paket & isi acara");
+      row("Paket", paketLabel(o) !== "-" ? paketLabel(o) : "");
+      boxes.forEach(b => row(b.judul || "Lainnya", lines(b.isi).map(x => "•  " + x.replace(BUL, "")).join("\n")));
+      y += 8; zebra = false;
+    }
+    if (team.length) {
+      sectionTitle("Tim bertugas");
+      const byR = {}; team.forEach(t => (byR[t.peran] = byR[t.peran] || []).push(t.nama + (t.hp ? `  (${t.hp})` : "")));
+      Object.entries(byR).forEach(([r, ns]) => row(r, ns.join("\n")));
+      const hadir = team.filter(t => o.absen?.[t.id]);
+      if (hadir.length) row("Absen", `${hadir.length} dari ${team.length} hadir` + (team.length > hadir.length ? `\nTidak tercatat: ${team.filter(t => !o.absen?.[t.id]).map(t => t.nama).join(", ")}` : ""));
+      const cl = checklistItems(o);
+      if (cl.some(x => o.cek?.[x]?.d || o.cek?.[x]?.p)) { const kp = cl.filter(x => !o.cek?.[x]?.p); row("Cek perlengkapan", `Datang ${cl.filter(x => o.cek?.[x]?.d).length}/${cl.length}  ·  Pulang ${cl.length - kp.length}/${cl.length}` + (kp.length ? `\nBelum dicek pulang: ${kp.join(", ")}` : "")); }
+      y += 8;
+    }
+    y += 14;
+  });
+
+  // ---------- tanda tangan ----------
+  need(96);
+  const sx = M + CW - 170;
+  d.text(sx + 85, y, `${(s.alamat || "").split(",").pop().trim() || "Lamongan"}, ${now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`, { size: 9, color: INK, align: "center" });
+  d.text(sx + 85, y + 13, "Admin " + s.bizName, { size: 9, bold: true, color: INK, align: "center" });
+  d.text(sx + 85, y + 72, "( ................................................ )", { size: 9, color: MUT, align: "center" });
+
+  // ---------- footer tiap halaman ----------
+  const total = d.count();
+  for (let i = 0; i < total; i++) {
+    d.onPage(i);
+    d.line(M, d.PH - 46, M + CW, d.PH - 46, LINE, 0.6);
+    d.text(M, d.PH - 38, `${s.bizName}  •  ${judul}  •  No. ${noDok}`, { size: 7.5, color: MUT });
+    d.text(M + CW, d.PH - 38, `Halaman ${i + 1} dari ${total}`, { size: 7.5, bold: true, color: MUT, align: "right" });
+  }
+  return d.blob();
+}
+async function downloadPdf(list, nama, judul) {
+  if (!list.length) return toast("Tidak ada acara dipilih");
+  const logo = await logoJpeg();
+  const b = pdfAcara(sortByDate(list.slice()), judul, logo); if (!b) return;
+  download(nama.replace(/[\\/:*?"<>|]+/g, "-") + ".pdf", b); toast("PDF diunduh");
+}
+
+/* ---------- ROUTER ---------- */
+function route() {
+  const h = location.hash.replace(/^#\/?/, "") || "dashboard";
+  const [path, qs] = h.split("?"); const parts = path.split("/");
+  let html, cur = parts[0];
+  if (parts[0] !== "acara" || (parts[1] !== "baru" && parts[2] !== "edit")) draft = null;
+  if (parts[0] === "acara" && parts[1] && parts[1] !== "baru" && isArsip(db.orders.find(o => o.id === parts[1]) || {})) cur = "arsip";
+  if (parts[0] === "acara" && parts[1] === "baru") { if (!draft) { draft = blankOrder(); draft._for = "new"; const tg = new URLSearchParams(qs).get("tgl"); if (tg) draft.tanggal = tg; } html = vForm(); }
+  else if (parts[0] === "acara" && parts[2] === "edit") html = vForm(parts[1]);
+  else if (parts[0] === "acara" && parts[1]) html = vDetail(parts[1]);
+  else if (parts[0] === "acara") html = vAcara();
+  else if (parts[0] === "arsip") html = vArsip();
+  else if (parts[0] === "kalender") html = vKalender();
+  else if (parts[0] === "tim") html = vTim();
+  else if (parts[0] === "pengaturan") html = vSettings();
+  else { cur = "dashboard"; html = vDashboard(); }
+  renderNav(cur);
+  $("#view").innerHTML = html; growAll();
+  if (draft) { updTotal(); updatePreview(); }
+}
+window.addEventListener("hashchange", () => { $$(".modal-bg").forEach(m => m.remove()); route(); window.scrollTo(0, 0); });
+
+/* ---------- EVENTS ---------- */
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "aq") { arsipState.q = t.value; const w = $("#alist"), tmp = document.createElement("div"); tmp.innerHTML = vArsip(); const nw = $("#alist", tmp); if (w && nw) w.innerHTML = nw.innerHTML; return; }
+  if (t.id === "q") { listState.q = t.value; const w = $("#listwrap"), tmp = document.createElement("div"); tmp.innerHTML = vAcara(); const nw = $("#listwrap", tmp); if (w && nw) w.innerHTML = nw.innerHTML; return; }
+  if (draft && t.dataset.b) { draft[t.dataset.b] = t.type === "checkbox" ? t.checked : t.hasAttribute("data-money") ? num(t.value) : t.value; if (t.dataset.b === "tanggal") { rerenderPart("timBox", timFields); rerenderPart("lokasiBox", lokasiFields); } updTotal(); }
+  if (draft && t.dataset.lk) { const [i, f] = t.dataset.lk.split("."); draft.lokasi[+i][f] = t.value; updTotal(); return; }
+  if (draft && t.dataset.kotak !== undefined) { draft.kotak[+t.dataset.kotak].isi = t.value; t.closest(".kotak").classList.toggle("isi", !!t.value.trim()); grow(t); updatePreview(); return; }
+  if (draft && t.dataset.kj !== undefined) { draft.kotak[+t.dataset.kj].judul = t.value; updatePreview(); return; }
+  if (t.dataset.s) { db.settings[t.dataset.s] = t.value; save(); if (t.dataset.s === "theme" || t.dataset.s === "bizName") applyTheme(); }
+  if (t.dataset.kat) { db.katalog[t.dataset.kat] = lines(t.value); save(); }
+});
+document.addEventListener("change", async e => {
+  const t = e.target;
+  if (t.id === "paketSel" && draft) {
+    const v = t.value, p = paketById(v), prev = paketById(draft.paketId);
+    const isiSekarang = PAKET_KEYS.map(k => kot(draft, k).isi.trim()).join("|") + draft.kotak.filter(b => b.dariPaket).map(b => b.isi).join("|");
+    const asli = prev ? (() => { const tmp = ensureKotak({ kotak: [] }); fillFromPaket(tmp, prev); return PAKET_KEYS.map(k => kot(tmp, k).isi.trim()).join("|") + tmp.kotak.filter(b => b.dariPaket).map(b => b.isi).join("|"); })() : "";
+    const diubah = isiSekarang.replace(/\|/g, "").trim() && isiSekarang !== asli;
+    if (p && diubah && !(await confirmBox(`Isi kotak Dekor, Efek, Dokumentasi, Rias, Bunga & Perlengkapan akan diganti dengan isi ${p.nama}. Lanjutkan?`, "Ganti"))) { t.value = prev ? prev.id : paketMode(draft) === "custom" ? "__custom" : ""; return; }
+    if (p) { Object.assign(draft, { paketMode: "paket", paketId: p.id, paketNama: p.nama, wilayahId: p.wilayahId, isiPaket: "" }); fillFromPaket(draft, p); toast(`Isi ${p.nama} masuk ke kotak — ubah yang beda`); }
+    else if (v === "__custom") { Object.assign(draft, { paketMode: "custom", paketId: "", paketNama: "", isiPaket: "" }); draft.kotak.forEach(b => { delete b.dariPaket; }); toast("Custom: isi kotak tetap, silakan ubah sendiri"); }
+    else { Object.assign(draft, { paketMode: "", paketId: "", paketNama: "", isiPaket: "" }); clearPaket(draft); toast("Paket & isinya dihapus dari acara ini"); }
+    rerenderPart("paketBox", paketFields); updTotal();
+  }
+  if (t.dataset.kdd !== undefined && draft && t.value) { const i = +t.dataset.kdd; applyOpt(draft.kotak[i], t.value); rerenderPart("kotakBox", kotakFields); const ta = $(`[data-kotak="${i}"]`); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }
+  if (t.dataset.wshow) { db.settings.waShow[t.dataset.wshow] = t.checked; save(); const w = $("#watext"); if (w) { const id = location.hash.split("/")[2]; w.innerHTML = waFmt(curWA = waCrew(db.orders.find(o => o.id === id))); } }
+  if (t.dataset.absen) { const o = curOrder(); o.absen = o.absen || {}; o.absen[t.dataset.absen] = t.checked; save(); route(); }
+  if (t.dataset.cek) { const o = curOrder(); o.cek = o.cek || {}; o.cek[t.dataset.cek] = o.cek[t.dataset.cek] || {}; o.cek[t.dataset.cek][t.dataset.k] = t.checked; save(); route(); }
+  if (t.id === "logoFile" && t.files[0]) {
+    const img = new Image(), url = URL.createObjectURL(t.files[0]);
+    img.onload = () => { const s = 256, cv = document.createElement("canvas"); cv.width = cv.height = s; const k = Math.max(s / img.width, s / img.height), w = img.width * k, h = img.height * k; cv.getContext("2d").drawImage(img, (s - w) / 2, (s - h) / 2, w, h); db.settings.logo = cv.toDataURL("image/jpeg", 0.88); URL.revokeObjectURL(url); save(); applyTheme(); route(); toast("Logo diganti"); };
+    img.src = url;
+  }
+  if (t.id === "abulan") { arsipState.bulan = t.value; arsipState.sel.clear(); route(); }
+  if (t.dataset && t.dataset.asel) { t.checked ? arsipState.sel.add(t.dataset.asel) : arsipState.sel.delete(t.dataset.asel); route(); }
+  if (t.id === "aall") { const vis = [...document.querySelectorAll("[data-asel]")].map(x => x.dataset.asel); vis.forEach(id => t.checked ? arsipState.sel.add(id) : arsipState.sel.delete(id)); route(); }
+  if (t.id === "restore" && t.files[0]) { const f = t.files[0]; t.value = ""; restoreData(f); }
+  if (t.id === "importXlsx" && t.files[0]) { const f = t.files[0]; t.value = ""; importExcel(f); }
+});
+// ingat bagian form mana yang sedang dibuka / dilipat
+document.addEventListener("toggle", e => { if (draft && e.target.dataset && e.target.dataset.sec) { draft._open = draft._open || {}; draft._open[e.target.dataset.sec] = e.target.open; } }, true);
+document.addEventListener("change", e => { const t = e.target; if (draft && t.dataset && t.dataset.lk && t.dataset.lk.endsWith(".maps")) { const l = ambilLink(t.value); if (l !== t.value) { t.value = l; draft.lokasi[+t.dataset.lk.split(".")[0]].maps = l; updTotal(); } } });
+document.addEventListener("focusout", e => { const t = e.target; if (t.hasAttribute && t.hasAttribute("data-money")) { const n = num(t.value); t.value = n ? n.toLocaleString("id-ID") : ""; } });
+const curOrder = () => db.orders.find(o => o.id === location.hash.split("/")[2]);
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-act],[data-abulanpilih],[data-filter],[data-uncrew],[data-delkotak],[data-ljenis],[data-cal],[data-day],[data-settab]"); if (!t) return;
+  const d = t.dataset;
+  if (draft && d.delkotak !== undefined) { const b = draft.kotak[+d.delkotak]; if (!lines(b.isi).length || await confirmBox(`Hapus kotak "${b.judul || "tanpa nama"}" beserta isinya?`)) { draft.kotak.splice(+d.delkotak, 1); rerenderPart("kotakBox", kotakFields); } return; }
+  if (d.uncrew && draft) { draft.crew = draft.crew.filter(x => x !== d.uncrew); rerenderPart("timBox", timFields); updTotal(); return; }
+  if (d.ljenis && draft) { const [i, k] = d.ljenis.split("."); draft.lokasi[+i].jenis = k; if (k !== "both") draft.lokasi[+i].tempatAkad = ""; rerenderPart("lokasiBox", lokasiFields); updTotal(); return; }
+  if (d.abulanpilih) { db.orders.filter(o => isArsip(o) && (d.abulanpilih === "zz" ? !o.tanggal : (o.tanggal || "").startsWith(d.abulanpilih))).forEach(o => arsipState.sel.add(o.id)); route(); return; }
+  if (d.filter === "arsip") { location.hash = "#/arsip"; return; }
+  if (d.filter) { listState.f = d.filter; route(); return; }
+  if (d.settab) { setTab = d.settab; route(); return; }
+
+  if (d.cal) { if (d.cal === "0") { const n = new Date(); calState = { y: n.getFullYear(), m: n.getMonth(), sel: todayStr() }; } else { const n = new Date(calState.y, calState.m + Number(d.cal), 1); calState.y = n.getFullYear(); calState.m = n.getMonth(); } route(); return; }
+  if (d.day) { calState.sel = d.day; const dd = parseD(d.day); calState.y = dd.getFullYear(); calState.m = dd.getMonth(); route(); return; }
+  const id = d.id;
+  switch (d.act) {
+    case "resetisi": { const p = paketById(draft.paketId); if (p) { fillFromPaket(draft, p); rerenderPart("kotakBox", kotakFields); toast("Isi paket dikembalikan"); } break; }
+    case "addkotak": { draft.kotak.push({ k: "c_" + uid(), judul: "", isi: "" }); rerenderPart("kotakBox", kotakFields); $(`[data-kj="${draft.kotak.length - 1}"]`)?.focus(); break; }
+    case "formcopy": copyText(waCrew(draft)); break;
+    case "formshare": shareText(waCrew(draft)); break;
+    case "quickcrew": timModal(); break;
+    case "pickteam": pickTeam(draft.crew, draft.tanggal, draft.id, ids => { if (!draft) return; draft.crew = ids; rerenderPart("timBox", timFields); updTotal(); }); break;
+    case "pickteam-detail": { const o = db.orders.find(x => x.id === id); pickTeam(o.crew || [], o.tanggal, o.id, ids => { o.crew = ids; save(); route(); }); break; }
+    case "openmaps": { e.preventDefault(); e.stopPropagation(); const o = db.orders.find(x => x.id === id), l = o && lokOf(o)[+(d.li || 0)]; if (l && /^https?:\/\//i.test(isi(l.maps))) window.open(l.maps, "_blank"); break; }
+    case "cekmaps": { const l = isi(draft.lokasi[+d.li].maps); if (!/^https?:\/\//i.test(l)) { toast("Belum ada link — tempel dulu link dari pelanggan"); break; } window.open(l, "_blank"); break; }
+    case "pastemaps": {
+      const li = +d.li, el = $(`[data-lk="${li}.maps"]`);
+      try { const txt = await navigator.clipboard.readText(); const l = ambilLink(txt); if (!/^https?:/.test(l)) { toast("Yang tersalin bukan link — salin link dari chat pelanggan"); break; } draft.lokasi[li].maps = l; el.value = l; updTotal(); toast(`Link Lokasi ${li + 1} ditempel`); }
+      catch { el.focus(); toast("Tekan lama kolomnya lalu pilih Tempel / Paste"); }
+      break; }
+    case "saveform": saveForm(); break;
+    case "cancelform": { const back = draft && draft._for !== "new" ? "#/acara/" + draft._for : "#/dashboard"; draft = null; location.hash = back; break; }
+    case "copy": copyText(curWA); break;
+    case "share": shareText(curWA); break;
+    case "sendcrew": shareText(waCrew(db.orders.find(o => o.id === id))); break;
+    case "rekap": { const t = todayStr(), e2 = sebulanLagi(); const l = sortByDate(activeOrders().filter(o => o.tanggal && o.tanggal >= t && o.tanggal <= e2 && !o.selesai)); const f = { day: "numeric", month: "short", year: "numeric" }; rekapModal(waRekap(l, `Jadwal 1 bulan ke depan (${fmtD(t, f)} – ${fmtD(e2, f)})`)); break; }
+    case "rekapbulan": { const k = `${calState.y}-${pad(calState.m + 1)}`; const l = sortByDate(activeOrders().filter(o => (o.tanggal || "").startsWith(k))); rekapModal(waRekap(l, "Jadwal " + parseD(k + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" }))); break; }
+    case "dup": { const o = JSON.parse(JSON.stringify(db.orders.find(x => x.id === id))); Object.assign(o, { id: uid(), dibuat: Date.now(), nama: o.nama + " (salinan)", tanggal: "", lokasiKe: "", batal: false, selesai: false, absen: {}, cek: {} }); db.orders.push(o); save(); location.hash = "#/acara/" + o.id + "/edit"; toast("Diduplikat — silakan ubah datanya"); break; }
+    case "del": if (await confirmBox("Data acara ini akan dihapus permanen.")) { db.orders = db.orders.filter(o => o.id !== id); save(); location.hash = "#/acara"; toast("Acara dihapus"); } break;
+    case "batal": { const o = db.orders.find(x => x.id === id); o.batal = !o.batal; save(); route(); break; }
+    case "exportcsv": case "exportxlsx": exportExcel(); break;
+    case "logoreset": delete db.settings.logo; save(); applyTheme(); route(); break;
+    case "backup": backupData(); break;
+    case "install": if (installEvt) { installEvt.prompt(); const r = await installEvt.userChoice; installEvt = null; if (r.outcome !== "accepted") toast("Pemasangan dibatalkan"); route(); } break;
+    case "installhide": try { localStorage.setItem("harvy_install_hide", String(Date.now() + 14 * 864e5)); } catch {} route(); break;
+    case "pdf1": { const o = db.orders.find(x => x.id === id); downloadPdf([o], `Data Acara ${o.nama} ${o.tanggal || ""}`.trim(), "Data acara"); break; }
+    case "selesai": { const o = db.orders.find(x => x.id === id); o.selesai = !o.selesai; save(); route(); toast(o.selesai ? "Ditandai selesai — masuk Arsip" : "Dikembalikan ke daftar acara"); break; }
+    case "apdf": { const list = db.orders.filter(o => arsipState.sel.has(o.id)); downloadPdf(list, `Arsip ${db.settings.bizName} (${list.length} acara) ${todayStr()}`, "Arsip acara"); break; }
+    case "adel": { const list = db.orders.filter(o => arsipState.sel.has(o.id)); if (!list.length) break;
+      if (await confirmBox(`${list.length} acara akan dihapus permanen dari perangkat ini dan tidak bisa dikembalikan. Saran: download PDF / backup dulu.`, `Hapus ${list.length} acara`)) { const ids = new Set(list.map(o => o.id)); db.orders = db.orders.filter(o => !ids.has(o.id)); arsipState.sel.clear(); save(); route(); toast(`${list.length} acara dihapus`); }
+      break; }
+    case "addtim": timModal(); break;
+    case "edittim": timModal(timById(id)); break;
+    case "timjobs": { const p = timById(id), t = todayStr(); const j = sortByDate(activeOrders().filter(o => (o.crew || []).includes(id)));
+      modal(`<h2>Jadwal ${esc(p.nama)}</h2>${j.length ? j.map(o => `<div style="${o.tanggal && o.tanggal < t ? "opacity:.5" : ""}">${evRow(o)}</div>`).join("") : `<div class="empty small">Belum ada jadwal.</div>`}<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn" data-close>Tutup</button></div>`, (m, close) => m.addEventListener("click", ev => { if (ev.target.closest("a.ev")) close(); })); break; }
+    case "addpaket": paketModal(null, id); break;
+    case "editpaket": paketModal(paketById(id)); break;
+    case "addaddon": addonModal(); break;
+    case "editaddon": addonModal(db.addons.find(a => a.id === id)); break;
+    case "addwil": promptModal("Wilayah baru", "", v => { db.wilayah.push({ id: uid(), nama: v }); save(); route(); }); break;
+    case "editwil": { const w = wilById(id); promptModal("Nama wilayah", w.nama, v => { w.nama = v; save(); route(); }); break; }
+    case "resetdb": if (await confirmBox("Paket, wilayah & perlengkapan dikembalikan ke data Excel awal. Data acara & tim tetap.", "Reset")) { db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); save(); route(); toast("Database direset"); } break;
+    case "wipe": if (await confirmBox("SEMUA data (acara, tim, pengaturan) akan dihapus. Sudah backup?", "Hapus semua")) { db = defaultDB(); db.orders = []; save(); applyTheme(); route(); toast("Data dihapus"); } break;
+  }
+});
+function rekapModal(text) {
+  modal(`<h2>Rekap jadwal</h2><div class="wa-prev"><div class="bubble" id="rk">${waFmt(text)}</div></div><div class="row" style="margin-top:12px"><button class="btn wa grow" id="rs">${ic("share")}Kirim / Bagikan</button><button class="btn grow" id="rc">${ic("copy")}Salin</button><button class="btn" data-close>Tutup</button></div>`,
+    m => { $("#rs", m).onclick = () => shareText(text); $("#rc", m).onclick = () => copyText(text); });
+}
+
+/* ---------- PASANG APLIKASI (PWA) & VERSI BARU ---------- */
+let installEvt = null;
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const installHidden = () => { try { return +localStorage.getItem("harvy_install_hide") > Date.now(); } catch { return false; } };
+function installCard(force) {
+  if (isStandalone() || (!force && installHidden())) return "";
+  const tutup = force ? "" : `<button class="btn icon ghost" data-act="installhide" title="Sembunyikan">${ic("x")}</button>`;
+  if (installEvt) return `<div class="card install"><img src="icons/icon-192.png?v=${APP_VERSION}" alt=""><div class="grow"><b>Pasang aplikasi Harvy WO</b><div class="small muted">Muncul di layar utama seperti aplikasi biasa & tetap jalan tanpa internet.</div></div><button class="btn gold" data-act="install">${ic("down")}Pasang</button>${tutup}</div>`;
+  if (isIOS) return `<div class="card install"><img src="icons/icon-192.png?v=${APP_VERSION}" alt=""><div class="grow"><b>Pasang di iPhone / iPad</b><div class="small muted">Buka lewat <b>Safari</b> → ketuk tombol <b>Bagikan</b> ${ic("share")} → pilih <b>Tambah ke Layar Utama</b>.</div></div>${tutup}</div>`;
+  return force ? `<div class="card install"><img src="icons/icon-192.png?v=${APP_VERSION}" alt=""><div class="grow"><b>Pasang aplikasi</b><div class="small muted">Buka link aplikasi di <b>Chrome / Edge</b> lalu pilih <b>Instal aplikasi</b> / <b>Tambahkan ke layar utama</b> dari menu ⋮.</div></div></div>` : "";
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if (/dashboard|pengaturan|^#?\/?$/.test(location.hash)) route(); });
+window.addEventListener("appinstalled", () => { installEvt = null; route(); toast("Aplikasi terpasang di perangkat ini"); });
+function showUpdate() {
+  if ($("#updbar")) return;
+  const b = document.createElement("div"); b.id = "updbar"; b.className = "updbar";
+  b.innerHTML = `${ic("spark2")}<span class="grow">Versi baru aplikasi tersedia.</span><button class="btn sm gold" id="updgo">Muat ulang</button>`;
+  document.body.appendChild(b); $("#updgo").onclick = () => { if (draft) { toast("Simpan form dulu, lalu muat ulang"); return; } location.reload(); };
+}
+
+/* ---------- INIT ---------- */
+db.orders.forEach(o => { toKotak(o); toLokasi(o); }); save();
+applyTheme();
+route();
+if (db._imported) { const n = db._imported; delete db._imported; save(); setTimeout(() => toast(`${n} acara & data kru dari versi lama sudah dipindahkan`), 400); }
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").then(reg => {
+    reg.addEventListener("updatefound", () => { const w = reg.installing; if (w) w.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) showUpdate(); }); });
+    setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000); // cek versi baru tiap 30 menit saat online
+  }).catch(() => {});
+}
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

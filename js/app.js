@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "63";
+const APP_VERSION = "64";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -664,23 +664,23 @@ function sectionCatalog() {
   db.paket.forEach(p => parseIsi(p.isi).forEach(b => { const k = (b.head || "Lainnya").toLowerCase(); if (!m.has(k)) m.set(k, new Set()); b.items.forEach(x => m.get(k).add(x)); }));
   return m;
 }
-const optList = (label, arr, pre = "n") => { arr = [...new Set(arr.filter(Boolean))]; return arr.length ? `<optgroup label="${esc(label)}">${arr.map(x => `<option value="${pre}|${esc(x)}">${esc(x)}</option>`).join("")}</optgroup>` : ""; };
+const optList = (label, arr, pre = "n") => { arr = [...new Set(arr.filter(Boolean))]; return arr.length ? [{ label, pre, items: arr }] : []; };
 const addonLabel = a => /^Sewa \d/.test(a.kategori) ? `Terop ${a.item} (${a.kategori.replace(/^Sewa /, "")})` : a.item;
 function kotakOpts(b) {
   const m = sectionCatalog(), K = db.katalog, from = h => [...(m.get(h) || [])];
   const addon = kat => db.addons.filter(a => a.kategori !== "Biaya Tambahan" && (!kat || kat.includes(a.kategori))).map(addonLabel);
   switch (b.k) {
-    case "gaun": return optList("Gaun (baris baru)", K.gaun) + optList("+ Pasangan (ke baris terakhir)", K.pasangan, "p") + optList("Hijab (ke baris terakhir)", K.hijab, "h");
-    case "melati": return optList("Jenis melati", K.melati) + optList("Request", ["request monte silver", "tutup sanggul", "ronce melati tibo dodo"], "r");
-    case "dekor": return optList("Dekor dari paket", from("dekor")) + optList("Paket tambahan", addon(["Paket Tambahan"]));
+    case "gaun": return [...optList("Gaun — jadi baris baru", K.gaun), ...optList("+ Pasangan / aksesoris — disambung ke gaun terakhir", K.pasangan, "p"), ...optList("Hijab — disambung ke gaun terakhir", K.hijab, "h")];
+    case "melati": return [...optList("Jenis melati — jadi baris baru", K.melati), ...optList("Request — disambung ke melati terakhir", ["monte silver", "tutup sanggul", "ronce melati tibo dodo"], "r")];
+    case "dekor": return [...optList("Dekor dari paket", from("dekor")), ...optList("Paket tambahan", addon(["Paket Tambahan"]))];
     case "efek": return optList("Efek & hiburan dari paket", from("efek & hiburan"));
     case "dok": return optList("Dokumentasi dari paket", from("dokumentasi & acara"));
     case "rias": return optList("Rias dari paket", from("rias pengantin"));
     case "bunga": return optList("Bunga dari paket", from("bunga"));
-    case "perlengkapan": return optList("Perlengkapan dari paket", from("perlengkapan")) + Object.entries(groupBy(db.addons.filter(a => a.kategori !== "Biaya Tambahan"), "kategori")).map(([k, arr]) => optList(k, arr.map(addonLabel))).join("");
+    case "perlengkapan": return [...optList("Perlengkapan dari paket", from("perlengkapan")), ...Object.entries(groupBy(db.addons.filter(a => a.kategori !== "Biaya Tambahan"), "kategori")).flatMap(([k, arr]) => optList(k, arr.map(addonLabel)))];
     case "makeup": return optList("Jadwal make up", K.makeup || []);
     case "nb": return optList("Catatan yang sering dipakai", K.nb || []);
-    default: return [...m.entries()].map(([k, v]) => optList(k.replace(/\b\w/g, c => c.toUpperCase()), [...v])).join("") + optList("Perlengkapan & sewa", addon());
+    default: return [...[...m.entries()].flatMap(([k, v]) => optList(k.replace(/\b\w/g, c => c.toUpperCase()), [...v])), ...optList("Perlengkapan & sewa", addon())];
   }
 }
 /* tambahkan pilihan ke kotak: baris baru, atau sambung ke baris terakhir (pasangan / hijab / request) */
@@ -689,12 +689,35 @@ function applyOpt(b, val) {
   if (kind === "n" || !L.length) L.push(kind === "p" ? x : kind === "h" ? `(${x})` : x);
   else if (kind === "p") L[L.length - 1] += ` + ${x}`;
   else if (kind === "h") L[L.length - 1] += `, (${x})`;
-  else if (kind === "r") L[L.length - 1] = /\(request /.test(L[L.length - 1]) ? L[L.length - 1].replace(/\)$/, ` + ${x})`) : L[L.length - 1] + ` (${x})`;
+  else if (kind === "r") L[L.length - 1] = /\(request /.test(L[L.length - 1]) ? L[L.length - 1].replace(/\)$/, ` + ${x})`) : L[L.length - 1] + ` (request ${x})`;
   b.isi = L.join("\n");
+}
+/* Pilih isi kotak: daftar tetap terbuka, bisa ketuk banyak item berturut-turut */
+function pickKotak(i) {
+  const b = draft.kotak[i], groups = kotakOpts(b), riwayat = []; let q = "";
+  modal(`<div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">${esc(b.judul || "Isi kotak")}</h2><button type="button" class="btn gold" data-close>${ic("check")}Selesai</button></div>
+    <div class="kp-prev" id="kpPrev"></div>
+    <div class="row" style="margin:10px 0"><div class="search">${ic("search")}<input class="in" id="kpq" placeholder="Cari…" autocomplete="off"></div><button type="button" class="btn" id="kpUndo">Batalkan</button></div>
+    <div class="kp-list" id="kpList"></div>`, (m, close) => {
+    const prev = () => { const L = lines(b.isi); $("#kpPrev", m).innerHTML = L.length ? L.map((x, n) => `<div><b>${n + 1}.</b> ${esc(x.replace(BUL, ""))}</div>`).join("") : `<span class="muted">Belum ada isi — ketuk pilihan di bawah.</span>`; $("#kpUndo", m).disabled = !riwayat.length; };
+    const draw = () => {
+      const qq = q.toLowerCase().trim(), ada = new Set(lines(b.isi).map(x => x.replace(BUL, "").toLowerCase()));
+      $("#kpList", m).innerHTML = groups.map((g, gi) => { const items = g.items.filter(x => !qq || x.toLowerCase().includes(qq)); return items.length ? `<div class="kp-h">${esc(g.label)}</div><div class="kp-chips">${items.map(x => `<button type="button" class="chip ${g.pre === "n" && ada.has(x.toLowerCase()) ? "on" : ""}" data-kv="${gi}" data-kx="${esc(x)}">${g.pre === "p" ? "+ " : ""}${esc(x)}</button>`).join("")}</div>` : ""; }).join("") || `<div class="empty small">Tidak ada yang cocok — tulis langsung di kotaknya.</div>`;
+    };
+    const sync = () => { const ta = $(`[data-kotak="${i}"]`); if (ta) { ta.value = b.isi; ta.closest(".kotak").classList.toggle("isi", !!b.isi.trim()); grow(ta); } updatePreview(); };
+    prev(); draw();
+    $("#kpq", m).oninput = e => { q = e.target.value; draw(); };
+    $("#kpList", m).onclick = e => {
+      const c = e.target.closest("[data-kv]"); if (!c) return;
+      const g = groups[+c.dataset.kv]; riwayat.push(b.isi); applyOpt(b, `${g.pre}|${c.dataset.kx}`);
+      prev(); draw(); sync(); c.classList.add("tap"); setTimeout(() => c.classList.remove("tap"), 250);
+    };
+    $("#kpUndo", m).onclick = () => { if (!riwayat.length) return; b.isi = riwayat.pop(); prev(); draw(); sync(); };
+  });
 }
 function kotakFields() {
   return draft.kotak.map((b, i) => { const std = KOTAK.find(([k]) => k === b.k); return `<div class="kotak ${lines(b.isi).length ? "isi" : ""}">
-    <div class="kotak-h">${std ? `<span>${esc(b.judul)}</span>` : `<input class="kh" data-kj="${i}" value="${esc(b.judul)}" placeholder="Nama kotak">`}<select class="kdd" data-kdd="${i}" title="Pilih dari database"><option value="">＋ Pilih</option>${kotakOpts(b)}</select>${std ? "" : `<button type="button" class="mx" title="Hapus kotak" data-delkotak="${i}">${ic("x")}</button>`}</div>
+    <div class="kotak-h">${std ? `<span>${esc(b.judul)}</span>` : `<input class="kh" data-kj="${i}" value="${esc(b.judul)}" placeholder="Nama kotak">`}${kotakOpts(b).length ? `<button type="button" class="kdd" data-kpick="${i}" title="Pilih dari database">＋ Pilih</button>` : ""}${std ? "" : `<button type="button" class="mx" title="Hapus kotak" data-delkotak="${i}">${ic("x")}</button>`}</div>
     <textarea class="kt" rows="2" data-kotak="${i}" placeholder="${esc(std ? "mis. " + std[2].split("\n").join(" / ") : "Tulis isinya, 1 baris = 1 item")}">${esc(b.isi)}</textarea></div>`; }).join("");
 }
 function paketFields() {
@@ -1320,7 +1343,6 @@ document.addEventListener("change", async e => {
     else { Object.assign(draft, { paketMode: "", paketId: "", paketNama: "", isiPaket: "" }); clearPaket(draft); toast("Paket & isinya dihapus dari acara ini"); }
     rerenderPart("paketBox", paketFields); updTotal();
   }
-  if (t.dataset.kdd !== undefined && draft && t.value) { const i = +t.dataset.kdd; applyOpt(draft.kotak[i], t.value); rerenderPart("kotakBox", kotakFields); const ta = $(`[data-kotak="${i}"]`); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }
   if (t.dataset.wshow) { db.settings.waShow[t.dataset.wshow] = t.checked; save(); const w = $("#watext"); if (w) { const id = location.hash.split("/")[2]; w.innerHTML = waFmt(curWA = waCrew(db.orders.find(o => o.id === id))); } }
   if (t.dataset.absen) { const o = curOrder(); o.absen = o.absen || {}; o.absen[t.dataset.absen] = t.checked; save(); route(); }
   if (t.dataset.cek) { const o = curOrder(); o.cek = o.cek || {}; o.cek[t.dataset.cek] = o.cek[t.dataset.cek] || {}; o.cek[t.dataset.cek][t.dataset.k] = t.checked; save(); route(); }
@@ -1341,11 +1363,12 @@ document.addEventListener("change", e => { const t = e.target; if (draft && t.da
 document.addEventListener("focusout", e => { const t = e.target; if (t.hasAttribute && t.hasAttribute("data-money")) { const n = num(t.value); t.value = n ? n.toLocaleString("id-ID") : ""; } });
 const curOrder = () => db.orders.find(o => o.id === location.hash.split("/")[2]);
 document.addEventListener("click", async e => {
-  const t = e.target.closest("[data-act],[data-abulanpilih],[data-filter],[data-uncrew],[data-delkotak],[data-ljenis],[data-cal],[data-day],[data-settab]"); if (!t) return;
+  const t = e.target.closest("[data-act],[data-kpick],[data-abulanpilih],[data-filter],[data-uncrew],[data-delkotak],[data-ljenis],[data-cal],[data-day],[data-settab]"); if (!t) return;
   const d = t.dataset;
   if (draft && d.delkotak !== undefined) { const b = draft.kotak[+d.delkotak]; if (!lines(b.isi).length || await confirmBox(`Hapus kotak "${b.judul || "tanpa nama"}" beserta isinya?`)) { draft.kotak.splice(+d.delkotak, 1); rerenderPart("kotakBox", kotakFields); } return; }
   if (d.uncrew && draft) { draft.crew = draft.crew.filter(x => x !== d.uncrew); rerenderPart("timBox", timFields); updTotal(); return; }
   if (d.ljenis && draft) { const [i, k] = d.ljenis.split("."); draft.lokasi[+i].jenis = k; if (k !== "both") draft.lokasi[+i].tempatAkad = ""; rerenderPart("lokasiBox", lokasiFields); updTotal(); return; }
+  if (d.kpick !== undefined && draft) { pickKotak(+d.kpick); return; }
   if (d.abulanpilih) { db.orders.filter(o => isArsip(o) && (d.abulanpilih === "zz" ? !o.tanggal : (o.tanggal || "").startsWith(d.abulanpilih))).forEach(o => arsipState.sel.add(o.id)); route(); return; }
   if (d.filter === "arsip") { location.hash = "#/arsip"; return; }
   if (d.filter) { listState.f = d.filter; route(); return; }

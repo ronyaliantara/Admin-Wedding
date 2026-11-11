@@ -335,3 +335,4 @@ button.kdd{cursor:pointer}
 @media (max-width:900px){.savebar{bottom:calc(80px + env(safe-area-inset-bottom))}}
 .wajib{color:var(--bad);font-weight:700;font-size:11.5px}
 .in.err{border-color:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 20%,transparent)}
+.navinfo{font-size:12.5px;margin-top:6px;padding:8px 10px;border-radius:10px;line-height:1.45}.navinfo.ok{background:var(--ok-soft);color:var(--ok)}.navinfo.warn{background:var(--warn-soft);color:var(--warn)}

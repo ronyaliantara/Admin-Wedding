@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "67";
+const APP_VERSION = "68";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -294,6 +294,24 @@ const roleNames = (o, r) => teamOf(o).filter(t => t.peran === r).map(t => t.nama
 const teamLine = t => `${t.nama} - ${t.peran}${t.hp ? ` (${t.hp})` : ""}`;
 const initials = n => String(n || "?").trim().split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
 const ambilLink = s => { const m = String(s || "").match(/https?:\/\/\S+/); return m ? m[0].replace(/[).,]+$/, "") : String(s || "").trim(); };
+/* Link navigasi langsung: kru ketuk → Google Maps langsung rute dari posisinya ke lokasi tujuan */
+function mapsCoords(s) {
+  s = String(s || ""); let m;
+  if ((m = s.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/))) return [m[1], m[2]];          // titik pin di link panjang
+  if ((m = s.match(/[?&](?:q|ll|query|destination|daddr|center)=(?:loc:)?(-?\d+(?:\.\d+)?)(?:,|%2C)\s*(-?\d+(?:\.\d+)?)/i))) return [m[1], m[2]];
+  if ((m = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/))) return [m[1], m[2]];
+  if ((m = s.trim().match(/^(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$/))) return [m[1], m[2]];     // koordinat saja: -7.09, 112.45
+  return null;
+}
+const navUrl = dest => `https://www.google.com/maps/dir/?api=1&destination=${/^-?[\d.]+,-?[\d.]+$/.test(dest) ? dest : encodeURIComponent(dest)}&travelmode=driving&dir_action=navigate`;
+function mapsNav(s) {
+  s = String(s || "").trim(); if (!s) return null;
+  const c = mapsCoords(s);
+  if (c) return { href: navUrl(`${c[0]},${c[1]}`), direct: true };
+  if (/^https?:\/\//i.test(s)) { const q = s.match(/[?&](?:q|query)=([^&]+)/i); return q ? { href: navUrl(decodeURIComponent(q[1].replace(/\+/g, " "))), direct: true } : { href: s, direct: false }; }
+  return { href: navUrl(s), direct: true };                                                            // teks alamat / nama tempat
+}
+const navHref = l => (mapsNav(l && l.maps) || {}).href || "";
 const paketLabel = o => { const p = paketById(o.paketId); if (p && o.paketMode !== "") return `${p.nama} · ${wilById(p.wilayahId)?.nama || ""}`; return String(o.paketNama || "").trim() || (String(o.isiPaket || "").trim() ? "Paket custom" : "-"); };
 const activeOrders = () => db.orders.filter(o => !o.batal);
 const sortByDate = arr => arr.sort((a, b) => (a.tanggal || "9999").localeCompare(b.tanggal || "9999"));
@@ -324,7 +342,7 @@ function waBriefing(o, show = db.settings.waShow) {
     ...lokJam(l).map(([n, j]) => `• ${n}: ${isi(j) || "-"}`),
     isi(l.tempat) && `• Tempat: ${l.tempat}`,
     show.alamat && isi(l.alamat) && `• Alamat: ${l.alamat}`,
-    show.maps && isi(l.maps) && `• Google Maps: ${l.maps}`
+    show.maps && isi(l.maps) && `• Google Maps (ketuk untuk navigasi): ${navHref(l)}`
   ]));
   if (o.acaraMalam) sec("🌙 *ACARA MALAM:*", ["• Ada acara malam"]);
   sec("💄 *JADWAL MAKE UP:*", kisi(o, "makeup").map(x => "• " + x));
@@ -357,7 +375,7 @@ function waKlasik(o, show = db.settings.waShow) {
   const lk = lokOf(o)[0] || {};
   if (lokKe(o)) L.push(`*Lokasi*        : ${lokKe(o)}`);
   if (show.alamat) L.push(`*Alamat*      : ${v(lokTempat(lk))}`);
-  if (show.maps && isi(lk.maps)) L.push(`*Maps*          : ${lk.maps}`);
+  if (show.maps && isi(lk.maps)) L.push(`*Maps*          : ${navHref(lk)}`);
   L.push(`*Acara*        : ${v(acaraStr(o))}`);
   if (show.paket) L.push(`*Paket*        : ${v(paketLabel(o))}`);
   L.push(`*MC*             : ${v(roleNames(o, "MC"))}`);
@@ -391,7 +409,7 @@ function waRekap(list, judul) {
     L.push(`*${i + 1}. ${o.nama}* — ${o.tanggal ? fmtD(o.tanggal, { weekday: "long", day: "numeric", month: "long" }) : "tgl belum ada"}`);
     lokOf(o).forEach(l => {
       L.push(`   📍 ${lokKe(o) ? `Lokasi ${lokKe(o)} · ` : ""}${lokJam(l).map(([n, jm]) => [n, jm].filter(x => isi(x)).join(" ")).join(", ")}${lokTempat(l) ? " — " + lokTempat(l) : ""}`);
-      L.push(`   🗺️ ${isi(l.maps) || "link lokasi belum ada"}`);
+      L.push(`   🗺️ ${navHref(l) || "link lokasi belum ada"}`);
     });
     if (o.acaraMalam) L.push("   🌙 ada acara malam");
     const tm = teamOf(o); L.push(`   👥 ${tm.length ? tm.map(t => `${t.nama} (${t.peran})`).join(", ") : "-"}`);
@@ -530,7 +548,7 @@ function vDetail(id) {
         <p class="small muted" style="margin:8px 0 0">Di HP: tekan <b>Kirim / Bagikan</b> lalu pilih WhatsApp → grup. Di laptop: <b>Salin teks</b> lalu tempel di WhatsApp Web.</p>
       </div>
       <div class="card"><h2>Data pengantin</h2><dl class="kv">
-        ${kv("IG", o.ig)}${kv("TikTok", o.tiktok)}${kv("Bapak", o.bapak)}${kv("Ibu", o.ibu)}${kv("No. HP", o.hp)}${lokOf(o).map(l => kv(lokKe(o) ? `Lokasi ${esc(lokKe(o))}` : "Lokasi", [lokJudul(l) + ": " + lokJam(l).map(([n, j]) => [n, j].filter(x => isi(x)).join(" ")).join(", "), l.tempat, l.alamat, isi(l.maps) || "link lokasi belum ada"].filter(x => isi(x)).join("\n"))).join("")}${o.acaraMalam ? kv("Acara malam", "Ada") : ""}${kv("Paket", paketLabel(o))}
+        ${kv("IG", o.ig)}${kv("TikTok", o.tiktok)}${kv("Bapak", o.bapak)}${kv("Ibu", o.ibu)}${kv("No. HP", o.hp)}${lokOf(o).map(l => kv(lokKe(o) ? `Lokasi ${esc(lokKe(o))}` : "Lokasi", [lokJudul(l) + ": " + lokJam(l).map(([n, j]) => [n, j].filter(x => isi(x)).join(" ")).join(", "), l.tempat, l.alamat, navHref(l) || "link lokasi belum ada"].filter(x => isi(x)).join("\n"))).join("")}${o.acaraMalam ? kv("Acara malam", "Ada") : ""}${kv("Paket", paketLabel(o))}
         ${kv("Tim", teamOf(o).map(teamLine).join("\n"))}${isi(o.keterangan) ? kv("Keterangan", o.keterangan) : ""}${(o.kotak || []).filter(b => lines(b.isi).length).map(b => kv(esc(b.judul || "Lainnya"), lines(b.isi).map(x => x.replace(BUL, "")).join("\n"))).join("")}</dl></div>
     </div>
     <div class="grid" style="align-content:start">
@@ -585,6 +603,11 @@ function vForm(id) {
 const groupBy = (arr, k) => arr.reduce((a, x) => ((a[x[k] || "Lainnya"] = a[x[k] || "Lainnya"] || []).push(x), a), {});
 const jamIn = (i, f, label) => { const v = draft.lokasi[i][f] || ""; return `<label class="f">${label}<input class="in" type="time" step="300" data-lk="${i}.${f}" value="${isJam(v) ? esc(normJam(v)) : ""}">${v && !isJam(v) ? `<span class="small muted" style="font-weight:400">Isian lama: “${esc(v)}” — pilih jam untuk mengganti</span>` : ""}</label>`; };
 const lin = (i, f, label, ph, extra = "") => `<label class="f">${label}<input class="in" data-lk="${i}.${f}" value="${esc(draft.lokasi[i][f] || "")}" placeholder="${esc(ph)}" ${extra}></label>`;
+function navInfo(l) {
+  const n = mapsNav(l && l.maps); if (!n) return "";
+  return n.direct ? `<div class="navinfo ok">✓ Langsung navigasi — kru tinggal ketuk, Google Maps langsung rute ke lokasi.</div>`
+    : `<div class="navinfo warn">⚠ Link pendek: kru perlu ketuk <b>Rute</b> sekali. Agar langsung navigasi, tempel <b>koordinat</b> — di Google Maps tekan lama titik lokasinya, salin angka koordinat (mis. -7.0912, 112.4567), lalu tempel di sini.</div>`;
+}
 function lokasiFields() {
   const l = draft.lokasi[0], i = 0;
   const lain = draft.tanggal ? db.orders.filter(o => o.id !== draft.id && !o.batal && o.tanggal === draft.tanggal) : [];
@@ -601,7 +624,8 @@ function lokasiFields() {
       ${l.jenis === "both" ? lin(i, "tempatAkad", "Tempat akad (kalau beda)", "mis. masjid") : ""}
     </div>
     <div class="grid g2" style="margin-top:12px">${lin(i, "tempat", "Tempat", "mis. Kediaman mempelai wanita", 'list="dl-tempat"')}${lin(i, "alamat", "Alamat", "mis. Desa Sawu RT 17 / RW 8, Dukun, Gresik")}</div>
-    <div class="row" style="align-items:flex-end;margin-top:12px">${lin(i, "maps", "Link Google Maps dari pelanggan — untuk sopir", "Tempel link yang dikirim pelanggan", 'type="url"').replace('class="f"', 'class="f grow"')}<button class="btn gold" type="button" data-act="pastemaps" data-li="${i}">${ic("copy")}Tempel</button><button class="btn" type="button" data-act="cekmaps" data-li="${i}">${ic("pin")}Cek</button></div>
+    <div class="row" style="align-items:flex-end;margin-top:12px">${lin(i, "maps", "Link Google Maps / koordinat dari pelanggan — untuk kru & sopir", "Tempel link atau koordinat, mis. -7.0912, 112.4567").replace('class="f"', 'class="f grow"')}<button class="btn gold" type="button" data-act="pastemaps" data-li="${i}">${ic("copy")}Tempel</button><button class="btn" type="button" data-act="cekmaps" data-li="${i}">${ic("pin")}Cek</button></div>
+    <div id="navInfo${i}">${navInfo(l)}</div>
   </div>`;
 }
 /* Isi paket di Excel: "Judul\n• item\n\nJudul 2\n• item" */
@@ -1248,7 +1272,7 @@ function pdfAcara(list, judul, logo) {
     sectionTitle("Jadwal & lokasi");
     row("Acara", lokJam(l).map(([nm, j]) => [nm, j].filter(x => String(x || "").trim()).join(" ")).join("\n") + (o.acaraMalam ? "\nAda acara malam" : ""));
     row("Tempat", l.tempat); row("Alamat", l.alamat);
-    if (isi(l.maps)) row("Google Maps", l.maps, { link: l.maps });
+    if (isi(l.maps)) row("Google Maps", navHref(l), { link: navHref(l) });
     y += 8; zebra = false;
 
     sectionTitle("Data pengantin");
@@ -1331,7 +1355,7 @@ document.addEventListener("input", e => {
   if (t.id === "aq") { arsipState.q = t.value; const w = $("#alist"), tmp = document.createElement("div"); tmp.innerHTML = vArsip(); const nw = $("#alist", tmp); if (w && nw) w.innerHTML = nw.innerHTML; return; }
   if (t.id === "q") { listState.q = t.value; const w = $("#listwrap"), tmp = document.createElement("div"); tmp.innerHTML = vAcara(); const nw = $("#listwrap", tmp); if (w && nw) w.innerHTML = nw.innerHTML; return; }
   if (draft && t.dataset.b) { draft[t.dataset.b] = t.type === "checkbox" ? t.checked : t.hasAttribute("data-money") ? num(t.value) : t.value; if (t.dataset.b === "tanggal") { rerenderPart("timBox", timFields); rerenderPart("lokasiBox", lokasiFields); } updTotal(); }
-  if (draft && t.dataset.lk) { const [i, f] = t.dataset.lk.split("."); draft.lokasi[+i][f] = t.value; updTotal(); return; }
+  if (draft && t.dataset.lk) { const [i, f] = t.dataset.lk.split("."); draft.lokasi[+i][f] = t.value; if (f === "maps") rerenderPart("navInfo" + i, () => navInfo(draft.lokasi[+i])); updTotal(); return; }
   if (draft && t.dataset.kotak !== undefined) { draft.kotak[+t.dataset.kotak].isi = t.value; t.closest(".kotak").classList.toggle("isi", !!t.value.trim()); grow(t); updatePreview(); return; }
   if (draft && t.dataset.kj !== undefined) { draft.kotak[+t.dataset.kj].judul = t.value; updatePreview(); return; }
   if (t.dataset.s) { db.settings[t.dataset.s] = t.value; save(); if (t.dataset.s === "theme" || t.dataset.s === "bizName") applyTheme(); }
@@ -1392,11 +1416,11 @@ document.addEventListener("click", async e => {
     case "quickcrew": timModal(); break;
     case "pickteam": pickTeam(draft.crew, draft.tanggal, draft.id, ids => { if (!draft) return; draft.crew = ids; rerenderPart("timBox", timFields); updTotal(); }); break;
     case "pickteam-detail": { const o = db.orders.find(x => x.id === id); pickTeam(o.crew || [], o.tanggal, o.id, ids => { o.crew = ids; save(); route(); }); break; }
-    case "openmaps": { e.preventDefault(); e.stopPropagation(); const o = db.orders.find(x => x.id === id), l = o && lokOf(o)[+(d.li || 0)]; if (l && /^https?:\/\//i.test(isi(l.maps))) window.open(l.maps, "_blank"); break; }
-    case "cekmaps": { const l = isi(draft.lokasi[+d.li].maps); if (!/^https?:\/\//i.test(l)) { toast("Belum ada link — tempel dulu link dari pelanggan"); break; } window.open(l, "_blank"); break; }
+    case "openmaps": { e.preventDefault(); e.stopPropagation(); const o = db.orders.find(x => x.id === id), l = o && lokOf(o)[+(d.li || 0)]; if (l && navHref(l)) window.open(navHref(l), "_blank"); break; }
+    case "cekmaps": { const h = navHref(draft.lokasi[+d.li]); if (!h) { toast("Belum ada link — tempel dulu link / koordinat dari pelanggan"); break; } window.open(h, "_blank"); break; }
     case "pastemaps": {
       const li = +d.li, el = $(`[data-lk="${li}.maps"]`);
-      try { const txt = await navigator.clipboard.readText(); const l = ambilLink(txt); if (!/^https?:/.test(l)) { toast("Yang tersalin bukan link — salin link dari chat pelanggan"); break; } draft.lokasi[li].maps = l; el.value = l; updTotal(); toast(`Link Lokasi ${li + 1} ditempel`); }
+      try { const txt = await navigator.clipboard.readText(); const l = ambilLink(txt); if (!/^https?:/.test(l) && !mapsCoords(l)) { toast("Yang tersalin bukan link / koordinat lokasi"); break; } draft.lokasi[li].maps = l; el.value = l; updTotal(); rerenderPart("navInfo" + li, () => navInfo(draft.lokasi[li])); toast("Link lokasi ditempel"); }
       catch { el.focus(); toast("Tekan lama kolomnya lalu pilih Tempel / Paste"); }
       break; }
     case "saveform": saveForm(); break;

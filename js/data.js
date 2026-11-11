@@ -45,7 +45,7 @@ window.HARVY_SEED = {
    "nama": "Aglonema",
    "harga": 20000000,
    "deskripsi": "Lengkap dengan terop, kursi, dan sound system.",
-   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Tumbang\n• Welcome sign in\n\nEfek & Hiburan\n• Hena + nail art\n• MC\n\nDokumentasi & Acara\n• Foto 3 roll\n• Video (1x acara akad & resepsi)\n• Cinematic\n• File dalam flashdisk\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nPerlengkapan\n• Terop VVIP 1 plong\n• Terop semi 3 plong\n• Kursi + cover 200\n• Kipas 3\n• Kerucut + 2 meja\n• Sound system",
+   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Tumbang\n• Welcome sign in\n\nEfek & Hiburan\n• Hena + fake nail\n• MC\n\nDokumentasi & Acara\n• Foto 3 roll\n• Video (1x acara akad & resepsi)\n• Cinematic\n• File dalam flashdisk\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nPerlengkapan\n• Terop VVIP 1 plong\n• Terop semi 3 plong\n• Kursi + cover 200\n• Kipas 3\n• Kerucut + 2 meja\n• Sound system",
    "biayaTambahan": "Melati adat Jawa Sunda / Solo: Rp 500.000",
    "catatan": "Transportasi menyesuaikan lokasi"
   },
@@ -55,7 +55,7 @@ window.HARVY_SEED = {
    "nama": "Caladium",
    "harga": 36000000,
    "deskripsi": "Paket paling lengkap, foto unlimited.",
-   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Tumbang\n• Welcome sign in\n• Lengkungan 2\n• Panggung kaca\n• Dekor lorong\n• Free meja kursi akad\n\nEfek & Hiburan\n• Dry smoke (beam 2, parled, dry ice, kembang api 4)\n• Buket asli\n• Electone tunggal + 2 penyanyi\n• Hena + nail art\n• MC\n\nDokumentasi & Acara\n• Foto Unlimited\n• Video (1x acara akad & resepsi)\n• Cinematic\n• File dalam flashdisk\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nPerlengkapan\n• Terop VVIP 6 plong (4x6)\n• Kursi + cover 250\n• Kipas 3\n• Kerucut + 2 meja\n• Blower 1\n• Full karpet\n• Sound system",
+   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Tumbang\n• Welcome sign in\n• Lengkungan 2\n• Panggung kaca\n• Dekor lorong\n• Free meja kursi akad\n\nEfek & Hiburan\n• Dry smoke (beam 2, parled, dry ice, kembang api 4)\n• Buket asli\n• Electone tunggal + 2 penyanyi\n• Hena + fake nail\n• MC\n\nDokumentasi & Acara\n• Foto Unlimited\n• Video (1x acara akad & resepsi)\n• Cinematic\n• File dalam flashdisk\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nPerlengkapan\n• Terop VVIP 6 plong (4x6)\n• Kursi + cover 250\n• Kipas 3\n• Kerucut + 2 meja\n• Blower 1\n• Full karpet\n• Sound system",
    "biayaTambahan": "Melati adat Jawa Sunda / Solo: Rp 500.000",
    "catatan": "Transportasi menyesuaikan lokasi"
   },
@@ -125,7 +125,7 @@ window.HARVY_SEED = {
    "nama": "Sanseviera",
    "harga": 12500000,
    "deskripsi": "Lebih lengkap, dengan buket asli dan hena.",
-   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Welcome sign in\n• Tumbang\n\nDokumentasi & Acara\n• MC\n• Foto 3 roll\n• Hena & nail art\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nBunga\n• Buket asli\n• Melati asli, bukan adat",
+   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Welcome sign in\n• Tumbang\n\nDokumentasi & Acara\n• MC\n• Foto 3 roll\n• Hena & fake nail\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nBunga\n• Buket asli\n• Melati asli, bukan adat",
    "biayaTambahan": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
    "catatan": "Transportasi menyesuaikan lokasi"
   },
@@ -165,7 +165,7 @@ window.HARVY_SEED = {
    "nama": "Seropegia",
    "harga": 12500000,
    "deskripsi": "Lebih lengkap, dengan buket asli dan hena.",
-   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Welcome sign in\n• Tumbang\n\nDokumentasi & Acara\n• MC\n• Foto 3 roll\n• Hena & nail art\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nBunga\n• Buket asli\n• Melati asli, bukan adat",
+   "isi": "Dekor\n• Ukuran 4 x 8 meter\n• Pintu masuk\n• Welcome sign in\n• Tumbang\n\nDokumentasi & Acara\n• MC\n• Foto 3 roll\n• Hena & fake nail\n\nRias Pengantin\n• Gaun 3 gaun (bonus gaun akad)\n• Rias terima tamu 4 orang\n• Rias domas Putra 2 & putri 2\n• Rias penggapit 2\n• Rias orang tua & besan\n• Melati asli, bukan adat\n\nBunga\n• Buket asli\n• Melati asli, bukan adat",
    "biayaTambahan": "Melati adat Jawa Sunda / Solo: Rp 500.000\nAcara malam: Rp 1.300.000\nFotografer sampai acara malam: Rp 800.000",
    "catatan": "Transportasi menyesuaikan lokasi"
   },

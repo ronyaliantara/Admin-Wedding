@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "60";
+const APP_VERSION = "61";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -154,6 +154,12 @@ function migrate(d) {
   d.katalog = Object.assign({}, def.katalog, d.katalog || {});
   removeDemoPeople(d); mergeDupes(d);
   d.tim.forEach(x => { if (x.peran === "Crew") x.peran = "Crew Rias"; if (!ROLES.includes(x.peran)) x.peran = "Lainnya"; });
+  if (!d.settings.fakeNail) { // istilah "nail art" diganti "fake nail" (sekali)
+    const fx = s => typeof s === "string" ? s.replace(/nail art/gi, m => m[0] === "N" ? "Fake nail" : "fake nail") : s;
+    d.paket.forEach(pk => { pk.isi = fx(pk.isi); pk.deskripsi = fx(pk.deskripsi); });
+    d.orders.forEach(o => { (o.kotak || []).forEach(b => { b.isi = fx(b.isi); }); o.isiPaket = fx(o.isiPaket); });
+    d.settings.fakeNail = true;
+  }
   if (needRoster) { rosterList().forEach(r => { if (!d.tim.some(x => normNama(x.nama) === normNama(r.nama))) d.tim.push(r); }); d.settings.rosterV3 = true; }
   d.orders.forEach(o => linkLegacy(d, o));
   canonTim(d);
@@ -601,7 +607,7 @@ const KOTAK = [
   ["gaun", "Gaun & busana", "Putih kebaya + Blangkon, (Hijab solo)\nNavy jarik + Blangkon, (Hijab solo)"],
   ["melati", "Melati", "Solo putri (request monte silver + tutup sanggul)"],
   ["dekor", "Dekor", "Pintu masuk\nTumbang"],
-  ["efek", "Efek & hiburan", "Hena + nail art\nMC"],
+  ["efek", "Efek & hiburan", "Hena + fake nail\nMC"],
   ["dok", "Dokumentasi & acara", "Foto 3 roll\nVideo cinematic"],
   ["rias", "Rias pengantin", "Rias terima tamu 4 orang\nRias orang tua & besan"],
   ["bunga", "Bunga", "Buket asli"],

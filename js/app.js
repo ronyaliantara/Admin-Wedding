@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "58";
+const APP_VERSION = "59";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -738,6 +738,7 @@ function vTim() {
   const jobs = id => sortByDate(activeOrders().filter(o => (o.crew || []).includes(id)));
   const byRole = groupBy(db.tim, "peran");
   return `${mtop()}<div class="top"><div><h1>Tim</h1><p>Jadwal tugas tiap anggota tim</p></div><button class="btn gold" data-act="addtim">${ic("plus")}Anggota baru</button></div>
+  ${db.tim.length ? "" : `<div class="card empty">${ic("users")}<div>Belum ada anggota tim.</div><div class="small">Tekan <b>Anggota baru</b>, import dari Excel, atau Pengaturan → Data & Backup → <b>Kembalikan data awal Harvy</b>.</div></div>`}
   <div class="grid g2">${ROLES.filter(r => byRole[r]).map(r => `<div class="card"><h3>${r}</h3>${byRole[r].map(p => { const j = jobs(p.id), up = j.filter(o => o.tanggal >= t); return `<div class="li"><div class="avatar">${esc(p.nama[0] || "?")}</div><div class="grow"><div class="t">${esc(p.nama)} ${p.aktif === false ? '<span class="pill">nonaktif</span>' : ""}</div><div class="small muted">${up.length ? `Berikutnya: ${esc(up[0].nama)} · ${fmtD(up[0].tanggal, { day: "numeric", month: "short" })}` : "Belum ada jadwal"} · ${j.length} total tugas</div></div><button class="btn sm" data-act="timjobs" data-id="${p.id}">Jadwal</button><button class="btn icon ghost" data-act="edittim" data-id="${p.id}">${ic("edit")}</button></div>`; }).join("")}</div>`).join("")}</div>`;
 }
 function timModal(p) {
@@ -777,7 +778,12 @@ function vSettings() {
   if (setTab === "data") body = `<div class="grid g2"><div class="card"><h2>Excel</h2><p class="small muted">File Excel rapi berisi sheet <b>Acara, Tim, Paket, Perlengkapan</b>. Bisa dibuka & diedit di Excel / Google Sheets, lalu di-import lagi. File <b>Database_Harvy_Wedding.xlsx</b> asli juga bisa di-import untuk memperbarui paket & perlengkapan.</p><div class="row"><button class="btn gold" data-act="exportxlsx">${ic("down")}Export ke Excel (.xlsx)</button><label class="btn">${ic("up")}Import dari Excel<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="importXlsx" hidden></label></div></div>
     <div class="card"><h2>Backup</h2><p class="small muted">Simpan salinan semua data (acara, tim, paket, pengaturan) dalam satu file. Pakai untuk berjaga-jaga atau memindahkan data ke HP / iPad / laptop lain.${s.lastBackup ? `<br>Backup terakhir: <b>${esc(new Date(s.lastBackup).toLocaleString("id-ID"))}</b>` : "<br><b>Belum pernah backup.</b>"}</p><div class="row"><button class="btn gold" data-act="backup">${ic("down")}Download backup</button><label class="btn">${ic("up")}Pulihkan dari backup<input type="file" accept=".json,application/json" id="restore" hidden></label></div></div>
     <div class="card"><h2>Ringkasan</h2><dl class="kv"><dt>Acara</dt><dd>${db.orders.length}</dd><dt>Paket</dt><dd>${db.paket.length}</dd><dt>Perlengkapan</dt><dd>${db.addons.length}</dd><dt>Tim</dt><dd>${db.tim.length}</dd><dt>Ukuran</dt><dd>${(JSON.stringify(db).length / 1024).toFixed(1)} KB</dd></dl></div>
-    <div class="card"><h2>Reset</h2><p class="small muted">Kembalikan database paket & perlengkapan dari Excel awal, atau hapus semua data.</p><div class="row"><button class="btn" data-act="resetdb">Reset paket & perlengkapan</button><button class="btn danger" data-act="wipe">${ic("trash")}Hapus semua</button></div></div></div>`;
+    <div class="card" style="grid-column:1/-1"><h2>Hapus & reset</h2><p class="small muted">Data yang dihapus tidak bisa dikembalikan — <b>download backup dulu</b>.</p>
+      <div class="reset-list">
+        <div class="reset-it"><div class="grow"><b>Hapus semua acara</b><div class="small muted">${db.orders.length} acara (termasuk arsip) dihapus. Tim, paket & perlengkapan tetap.</div></div><button class="btn danger" data-act="wipeacara">${ic("trash")}Hapus acara</button></div>
+        <div class="reset-it"><div class="grow"><b>Kosongkan semua data</b><div class="small muted">Acara, tim, paket, wilayah & perlengkapan dihapus semua — mulai dari kosong. Profil usaha, logo & template pesan tetap.</div></div><button class="btn danger" data-act="wipe">${ic("trash")}Kosongkan semua</button></div>
+        <div class="reset-it"><div class="grow"><b>Kembalikan data awal Harvy</b><div class="small muted">Isi ulang daftar tim resmi Harvy + paket & perlengkapan dari Excel awal. Acara tidak dihapus.</div></div><button class="btn" data-act="resetdb">Kembalikan</button></div>
+      </div></div></div>`;
   return `${mtop()}<div class="top"><div><h1>Pengaturan</h1><p>Atur database, kru, template pesan & backup</p></div></div>
   <div class="tabs">${T.map(([k, l]) => `<button class="tab ${setTab === k ? "on" : ""}" data-settab="${k}">${l}</button>`).join("")}</div>${body}`;
 }
@@ -1314,8 +1320,12 @@ document.addEventListener("click", async e => {
     case "editaddon": addonModal(db.addons.find(a => a.id === id)); break;
     case "addwil": promptModal("Wilayah baru", "", v => { db.wilayah.push({ id: uid(), nama: v }); save(); route(); }); break;
     case "editwil": { const w = wilById(id); promptModal("Nama wilayah", w.nama, v => { w.nama = v; save(); route(); }); break; }
-    case "resetdb": if (await confirmBox("Paket, wilayah & perlengkapan dikembalikan ke data Excel awal. Data acara & tim tetap.", "Reset")) { db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); save(); route(); toast("Database direset"); } break;
-    case "wipe": if (await confirmBox("SEMUA data (acara, tim, pengaturan) akan dihapus. Sudah backup?", "Hapus semua")) { db = defaultDB(); db.orders = []; save(); applyTheme(); route(); toast("Data dihapus"); } break;
+    case "resetdb": if (await confirmBox("Daftar tim resmi Harvy, paket, wilayah & perlengkapan dikembalikan ke data awal (Excel). Tim/paket buatan sendiri dihapus. Acara tidak dihapus.", "Kembalikan")) {
+        const tim0 = rosterList(); db.orders.forEach(o => { o.crew = (o.crew || []).map(id => { const t0 = timById(id), m = t0 && tim0.find(x => normNama(x.nama) === normNama(t0.nama)); return m ? m.id : null; }).filter(Boolean); });
+        db.tim = tim0; db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); db.settings.rosterV3 = true; save(); route(); toast("Data awal Harvy dikembalikan"); } break;
+    case "wipeacara": if (await confirmBox(`${db.orders.length} acara (termasuk arsip) akan dihapus permanen. Sudah backup?`, "Hapus semua acara")) { db.orders = []; arsipState.sel.clear(); save(); route(); toast("Semua acara dihapus"); } break;
+    case "wipe": if (await confirmBox("SEMUA acara, tim, paket, wilayah & perlengkapan akan dihapus permanen — aplikasi mulai dari kosong. Sudah backup?", "Kosongkan semua")) {
+        Object.assign(db, { orders: [], tim: [], paket: [], wilayah: [], addons: [] }); db.settings.rosterV3 = true; arsipState.sel.clear(); save(); route(); toast("Semua data dikosongkan"); } break;
   }
 });
 function rekapModal(text) {

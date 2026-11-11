@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "59";
+const APP_VERSION = "60";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -166,12 +166,44 @@ function canonTim(d) {
   d.tim.forEach(x => { const i = pos(x); if (i >= 0) { x.nama = resmi[i].nama; x.peran = resmi[i].peran; } });
   d.tim.sort((a, b) => { const i = pos(a), j = pos(b); return (i < 0 ? 1e6 : i) - (j < 0 ? 1e6 : j); });
 }
+/* ---------- PENYIMPANAN: IndexedDB (database bawaan perangkat) + cadangan localStorage ---------- */
+const idb = (() => {
+  let opening = null;
+  const open = () => opening || (opening = new Promise((res, rej) => {
+    if (typeof indexedDB === "undefined") return rej(new Error("IndexedDB tidak tersedia"));
+    const r = indexedDB.open("harvy_wo", 1);
+    r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains("data")) d.createObjectStore("data"); if (!d.objectStoreNames.contains("snap")) d.createObjectStore("snap"); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error("IndexedDB terblokir"));
+  }));
+  const run = (store, mode, fn) => open().then(d => new Promise((res, rej) => {
+    const tx = d.transaction(store, mode), req = fn(tx.objectStore(store));
+    tx.oncomplete = () => res(req ? req.result : undefined); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  }));
+  return {
+    get: (s, k) => run(s, "readonly", st => st.get(k)), put: (s, k, v) => run(s, "readwrite", st => st.put(v, k)),
+    del: (s, k) => run(s, "readwrite", st => st.delete(k)), all: s => run(s, "readonly", st => st.getAll())
+  };
+})();
+const store = { idb: typeof indexedDB !== "undefined", mirror: true, ready: false };
+let _idbQueue = Promise.resolve();
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(db)); }
-  catch (e) { toast("Gagal menyimpan — memori penuh? Coba backup & hapus data lama."); }
+  db.savedAt = Date.now();
+  const json = JSON.stringify(db);
+  if (store.mirror) { try { localStorage.setItem(KEY, json); } catch (e) { store.mirror = false; try { localStorage.removeItem(KEY); } catch {} } }
+  if (store.idb && store.ready) _idbQueue = _idbQueue.then(() => idb.put("data", "db", json)).catch(e => { console.warn(e); store.idb = false; if (!store.mirror) toast("Gagal menyimpan — penyimpanan HP penuh. Download backup & hapus arsip lama."); });
+  else if (!store.mirror && store.ready) toast("Gagal menyimpan — penyimpanan HP penuh. Download backup & hapus arsip lama.");
+}
+/* titik pulih: harian (7 hari) + sebelum hapus / reset / import / pulihkan (5 terakhir) */
+async function snapshot(label, manual) {
+  if (!store.idb || !store.ready) return;
+  try {
+    const at = Date.now(), id = manual ? "m-" + at : "d-" + todayStr();
+    await idb.put("snap", id, { id, at, label: label || "Otomatis harian", ringkasan: { acara: db.orders.length, tim: db.tim.length, paket: db.paket.length }, data: JSON.stringify(db) });
+    const all = await idb.all("snap"), by = pre => all.filter(r => r.id.startsWith(pre)).sort((a, b) => b.at - a.at);
+    for (const r of [...by("d-").slice(7), ...by("m-").slice(5)]) await idb.del("snap", r.id);
+  } catch (e) { console.warn("snapshot", e); }
 }
 db = load();
-try { if (!localStorage.getItem(KEY)) save(); } catch (e) {}
 
 /* ---------- helpers ---------- */
 const timById = id => db.tim.find(t => t.id === id);
@@ -424,7 +456,7 @@ function vDashboard() {
   const hr = now.getHours(), salam = hr < 11 ? "Selamat pagi" : hr < 15 ? "Selamat siang" : hr < 18 ? "Selamat sore" : "Selamat malam";
   const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() + i, 1); const k = ymd(d).slice(0, 7); return { l: d.toLocaleDateString("id-ID", { month: "short" }), n: act.filter(o => (o.tanggal || "").startsWith(k)).length }; });
   const mx = Math.max(1, ...months.map(m => m.n));
-  return `${mtop()}${installCard()}<div class="top"><div><h1>${salam} ✨</h1><p>${fmtD(t)}</p></div>
+  return `${mtop()}${installCard()}${backupReminder()}<div class="top"><div><h1>${salam} ✨</h1><p>${fmtD(t)}</p></div>
     <div class="row noprint"><button class="btn" data-act="rekap">${ic("wa")}Rekap 1 bulan ke depan</button><a class="btn gold" href="#/acara/baru">${ic("plus")}Acara Baru</a></div></div>
   ${next ? `<div class="card today" style="margin-bottom:16px"><div class="lbl">${daysTo(next.tanggal) === 0 ? "Acara hari ini" : "Acara terdekat · H-" + daysTo(next.tanggal)}</div>
     <h2 class="sec-h">${esc(next.nama)}</h2><div class="muted">${fmtD(next.tanggal)} · ${esc(alamatStr(next) || "-")}</div>
@@ -775,7 +807,7 @@ function vSettings() {
   if (setTab === "katalog") body = `<div class="card"><h2>Pilihan cepat di form</h2><p class="small muted">Muncul di tombol <b>＋ Pilih</b> pada kotak-kotak form acara. Satu baris = satu pilihan.</p><div class="grid g2">${[["gaun", "Gaun"], ["pasangan", "Pasangan / aksesoris"], ["hijab", "Hijab / keterangan"], ["melati", "Jenis melati"], ["nb", "Catatan (Nb) yang sering dipakai"], ["makeup", "Jadwal make up yang sering dipakai"]].map(([k, l]) => `<label class="f">${l}<textarea class="in" rows="7" data-kat="${k}">${esc(db.katalog[k].join("\n"))}</textarea></label>`).join("")}</div></div>`;
   if (setTab === "wa") body = `<div class="card" style="margin-bottom:14px"><h2>Bentuk pesan grup</h2><label class="f">Format<select class="in" data-s="waFormat"><option value="briefing" ${s.waFormat !== "klasik" ? "selected" : ""}>Briefing rapi ber-emoji (📅 ✨ 📍 👗 👥)</option><option value="klasik" ${s.waFormat === "klasik" ? "selected" : ""}>Klasik (*Nama* : … seperti pesan grup lama)</option></select></label></div><div class="card"><h2>Penutup pesan grup</h2><p class="small muted">Ditempel otomatis di bawah setiap pesan untuk grup kru. Pakai *tebal* dan _miring_ ala WhatsApp.</p><textarea class="in" rows="6" data-s="footer">${esc(s.footer)}</textarea>
     <div class="hr"></div><h3>Kolom yang tampil di pesan grup (bawaan)</h3><div class="row" style="gap:16px">${WA_FIELDS.map(([k, l]) => `<label class="toggle"><input type="checkbox" data-wshow="${k}" ${s.waShow[k] ? "checked" : ""}>${l}</label>`).join("")}</div></div>`;
-  if (setTab === "data") body = `<div class="grid g2"><div class="card"><h2>Excel</h2><p class="small muted">File Excel rapi berisi sheet <b>Acara, Tim, Paket, Perlengkapan</b>. Bisa dibuka & diedit di Excel / Google Sheets, lalu di-import lagi. File <b>Database_Harvy_Wedding.xlsx</b> asli juga bisa di-import untuk memperbarui paket & perlengkapan.</p><div class="row"><button class="btn gold" data-act="exportxlsx">${ic("down")}Export ke Excel (.xlsx)</button><label class="btn">${ic("up")}Import dari Excel<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="importXlsx" hidden></label></div></div>
+  if (setTab === "data") body = `${keamananCard()}<div class="grid g2"><div class="card"><h2>Excel</h2><p class="small muted">File Excel rapi berisi sheet <b>Acara, Tim, Paket, Perlengkapan</b>. Bisa dibuka & diedit di Excel / Google Sheets, lalu di-import lagi. File <b>Database_Harvy_Wedding.xlsx</b> asli juga bisa di-import untuk memperbarui paket & perlengkapan.</p><div class="row"><button class="btn gold" data-act="exportxlsx">${ic("down")}Export ke Excel (.xlsx)</button><label class="btn">${ic("up")}Import dari Excel<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="importXlsx" hidden></label></div></div>
     <div class="card"><h2>Backup</h2><p class="small muted">Simpan salinan semua data (acara, tim, paket, pengaturan) dalam satu file. Pakai untuk berjaga-jaga atau memindahkan data ke HP / iPad / laptop lain.${s.lastBackup ? `<br>Backup terakhir: <b>${esc(new Date(s.lastBackup).toLocaleString("id-ID"))}</b>` : "<br><b>Belum pernah backup.</b>"}</p><div class="row"><button class="btn gold" data-act="backup">${ic("down")}Download backup</button><label class="btn">${ic("up")}Pulihkan dari backup<input type="file" accept=".json,application/json" id="restore" hidden></label></div></div>
     <div class="card"><h2>Ringkasan</h2><dl class="kv"><dt>Acara</dt><dd>${db.orders.length}</dd><dt>Paket</dt><dd>${db.paket.length}</dd><dt>Perlengkapan</dt><dd>${db.addons.length}</dd><dt>Tim</dt><dd>${db.tim.length}</dd><dt>Ukuran</dt><dd>${(JSON.stringify(db).length / 1024).toFixed(1)} KB</dd></dl></div>
     <div class="card" style="grid-column:1/-1"><h2>Hapus & reset</h2><p class="small muted">Data yang dihapus tidak bisa dikembalikan — <b>download backup dulu</b>.</p>
@@ -946,7 +978,8 @@ async function importExcel(file) {
     ${addons ? opt("imD", true, `Perlengkapan: ${addons.length} item`, "Daftar perlengkapan di aplikasi diganti dengan isi file.") : ""}
     </div><p class="small muted">Saran: download backup dulu sebelum import.</p>
     <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" data-close>Batal</button><button class="btn gold" id="imGo">${ic("up")}Import</button></div>`, (m, close) => {
-    $("#imGo", m).onclick = () => {
+    $("#imGo", m).onclick = async () => {
+      await snapshot("Sebelum import Excel", true);
       const on = id => $("#" + id, m)?.checked; const hasil = [];
       if (paket && on("imP")) { wilayah.forEach(w => { if (!db.wilayah.some(x => x.id === w.id)) db.wilayah.push(w); }); db.paket = paket; hasil.push(`${paket.length} paket`); }
       if (addons && on("imD")) { db.addons = addons; hasil.push(`${addons.length} perlengkapan`); }
@@ -991,7 +1024,8 @@ async function restoreData(file) {
       <label class="ck" style="align-items:flex-start"><input type="radio" name="rmode" value="gabung" checked><span><b>Gabungkan</b><br><span class="small muted">Tambahkan acara, tim, paket & perlengkapan yang belum ada. Data di perangkat ini tidak diubah.</span></span></label>
       <label class="ck" style="align-items:flex-start"><input type="radio" name="rmode" value="ganti"><span><b>Ganti semua</b><br><span class="small muted">Semua data di perangkat ini diganti isi backup (untuk pindah HP / laptop).</span></span></label></div>
     <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" data-close>Batal</button><button class="btn gold" id="rGo">Pulihkan</button></div>`, (m, close) => {
-    $("#rGo", m).onclick = () => {
+    $("#rGo", m).onclick = async () => {
+      await snapshot("Sebelum pulihkan backup", true);
       const mode = $('input[name="rmode"]:checked', m).value;
       const b = migrate(JSON.parse(JSON.stringify(d))); b.orders.forEach(o => { toKotak(o); toLokasi(o); });
       if (mode === "ganti") db = b;
@@ -1032,6 +1066,40 @@ function vArsip() {
   <div class="card abar"><label class="toggle"><input type="checkbox" id="aall" ${semua ? "checked" : ""}>Pilih semua (${arr.length})</label><b class="grow small">${nSel} dipilih</b>
     <button class="btn sm gold" data-act="apdf" ${nSel ? "" : "disabled"}>${ic("down")}PDF</button><button class="btn sm danger" data-act="adel" ${nSel ? "" : "disabled"}>${ic("trash")}Hapus</button></div>
   <div id="alist">${arr.length ? Object.keys(groups).sort().reverse().map(k => `<div class="month-h"><span>${k === "zz" ? "Tanpa tanggal" : parseD(k + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</span><button class="btn sm ghost" data-abulanpilih="${k}">Pilih bulan ini</button></div><div class="card" style="padding:6px">${groups[k].map(row).join("")}</div>`).join("") : `<div class="card empty">${ic("arsip")}<div>Belum ada acara di arsip.</div><div class="small">Acara otomatis masuk ke sini setelah tanggalnya lewat, atau saat ditandai selesai / batal.</div></div>`}</div>`;
+}
+
+/* ---------- KEAMANAN DATA ---------- */
+function keamananCard() {
+  const lb = db.settings.lastBackup ? new Date(db.settings.lastBackup) : null;
+  return `<div class="card" style="margin-bottom:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Keamanan data</h2><span class="pill ${store.idb ? "ok" : "warn"}">${store.idb ? "Database perangkat aktif" : "Mode cadangan"}</span></div>
+    <dl class="kv" style="margin-top:12px"><dt>Penyimpanan</dt><dd>${store.idb ? "Database bawaan perangkat (IndexedDB)" + (store.mirror ? " + salinan cadangan" : "") : "Penyimpanan sederhana browser (localStorage)"}</dd>
+    <dt>Izin permanen</dt><dd id="persistInfo">memeriksa…</dd><dt>Terpakai</dt><dd id="usageInfo">memeriksa…</dd>
+    <dt>Backup terakhir</dt><dd>${lb ? esc(lb.toLocaleString("id-ID")) + (Date.now() - lb > 7 * 864e5 ? " — <b>sudah lebih dari seminggu</b>" : "") : "<b>belum pernah</b>"}</dd></dl>
+    <div class="row" style="margin-top:10px"><button class="btn gold sm" data-act="backup">${ic("down")}Download backup sekarang</button><button class="btn sm" data-act="persist">Minta izin penyimpanan permanen</button></div>
+    <div class="hr"></div><h3>Titik pulih otomatis</h3><p class="small muted" style="margin-top:-4px">Disimpan di perangkat ini: 1 per hari (7 hari terakhir) + sebelum setiap hapus / reset / import / pulihkan. Pakai kalau ada data yang terhapus tidak sengaja.</p>
+    <div id="snapList" class="small muted">Memuat…</div></div>`;
+}
+async function loadKeamanan() {
+  const el = $("#snapList"); if (!el) return;
+  try {
+    const p = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : null;
+    const pi = $("#persistInfo"); if (pi) pi.innerHTML = p ? "Diizinkan ✓ — browser tidak akan menghapus data otomatis" : p === false ? (isIOS ? "Di iPhone/iPad: pasang ke Layar Utama agar data tidak dihapus otomatis" : "Belum — tekan tombol di bawah, atau pasang aplikasinya") : "Tidak didukung browser ini";
+    const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
+    const ui = $("#usageInfo"); if (ui) ui.textContent = est ? `${(est.usage / 1048576).toFixed(1)} MB dari ±${Math.round(est.quota / 1048576)} MB tersedia` : `${(JSON.stringify(db).length / 1024).toFixed(0)} KB data`;
+  } catch {}
+  if (!store.idb) { el.textContent = "Titik pulih memerlukan database perangkat (tidak tersedia di mode ini)."; return; }
+  try {
+    const all = (await idb.all("snap")).sort((a, b) => b.at - a.at);
+    el.innerHTML = all.length ? all.map(r => `<div class="li"><div class="grow"><div class="t">${esc(r.label)}</div><div class="small muted">${esc(new Date(r.at).toLocaleString("id-ID"))} · ${r.ringkasan.acara} acara · ${r.ringkasan.tim} tim</div></div><button class="btn sm" data-act="snaprestore" data-id="${esc(r.id)}">Pulihkan</button></div>`).join("") : "Belum ada titik pulih — dibuat otomatis mulai hari ini.";
+  } catch { el.textContent = "Titik pulih tidak bisa dibaca."; }
+}
+/* pengingat backup di Dashboard */
+function backupReminder() {
+  if (!db.orders.length) return "";
+  try { if (+localStorage.getItem("harvy_bk_hide") > Date.now()) return ""; } catch {}
+  const lb = db.settings.lastBackup ? new Date(db.settings.lastBackup) : null, hari = lb ? Math.floor((Date.now() - lb) / 864e5) : null;
+  if (lb && hari < 7) return "";
+  return `<div class="card install"><div class="avatar" style="width:46px;height:46px">${ic("down")}</div><div class="grow"><b>${lb ? `Sudah ${hari} hari belum backup` : "Data belum pernah di-backup"}</b><div class="small muted">Simpan salinan data ke file supaya aman kalau HP rusak / ganti HP.</div></div><button class="btn gold" data-act="backup">Backup</button><button class="btn icon ghost" data-act="bkhide" title="Nanti">${ic("x")}</button></div>`;
 }
 
 /* ---------- PDF laporan acara (kop surat + ringkasan + rincian) ---------- */
@@ -1211,6 +1279,7 @@ function route() {
   else { cur = "dashboard"; html = vDashboard(); }
   renderNav(cur);
   $("#view").innerHTML = html; growAll();
+  if ($("#snapList")) loadKeamanan();
   if (draft) { updTotal(); updatePreview(); }
 }
 window.addEventListener("hashchange", () => { $$(".modal-bg").forEach(m => m.remove()); route(); window.scrollTo(0, 0); });
@@ -1297,18 +1366,24 @@ document.addEventListener("click", async e => {
     case "rekap": { const t = todayStr(), e2 = sebulanLagi(); const l = sortByDate(activeOrders().filter(o => o.tanggal && o.tanggal >= t && o.tanggal <= e2 && !o.selesai)); const f = { day: "numeric", month: "short", year: "numeric" }; rekapModal(waRekap(l, `Jadwal 1 bulan ke depan (${fmtD(t, f)} – ${fmtD(e2, f)})`)); break; }
     case "rekapbulan": { const k = `${calState.y}-${pad(calState.m + 1)}`; const l = sortByDate(activeOrders().filter(o => (o.tanggal || "").startsWith(k))); rekapModal(waRekap(l, "Jadwal " + parseD(k + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" }))); break; }
     case "dup": { const o = JSON.parse(JSON.stringify(db.orders.find(x => x.id === id))); Object.assign(o, { id: uid(), dibuat: Date.now(), nama: o.nama + " (salinan)", tanggal: "", lokasiKe: "", batal: false, selesai: false, absen: {}, cek: {} }); db.orders.push(o); save(); location.hash = "#/acara/" + o.id + "/edit"; toast("Diduplikat — silakan ubah datanya"); break; }
-    case "del": if (await confirmBox("Data acara ini akan dihapus permanen.")) { db.orders = db.orders.filter(o => o.id !== id); save(); location.hash = "#/acara"; toast("Acara dihapus"); } break;
+    case "del": if (await confirmBox("Data acara ini akan dihapus permanen.")) { await snapshot(`Sebelum hapus acara ${(db.orders.find(o => o.id === id) || {}).nama || ""}`, true); db.orders = db.orders.filter(o => o.id !== id); save(); location.hash = "#/acara"; toast("Acara dihapus"); } break;
     case "batal": { const o = db.orders.find(x => x.id === id); o.batal = !o.batal; save(); route(); break; }
     case "exportcsv": case "exportxlsx": exportExcel(); break;
     case "logoreset": delete db.settings.logo; save(); applyTheme(); route(); break;
-    case "backup": backupData(); break;
+    case "backup": backupData(); route(); break;
+    case "bkhide": try { localStorage.setItem("harvy_bk_hide", String(Date.now() + 3 * 864e5)); } catch {} route(); break;
+    case "persist": { const ok = navigator.storage && navigator.storage.persist ? await navigator.storage.persist() : false; toast(ok ? "Izin penyimpanan permanen diberikan ✓" : isIOS ? "Di iPhone/iPad: pasang aplikasi ke Layar Utama" : "Browser belum memberi izin — pasang aplikasinya lalu coba lagi"); loadKeamanan(); break; }
+    case "snaprestore": { const r = await idb.get("snap", id); if (!r) { toast("Titik pulih tidak ditemukan"); break; }
+      if (await confirmBox(`Kembalikan data ke "${r.label}" (${new Date(r.at).toLocaleString("id-ID")}) — ${r.ringkasan.acara} acara, ${r.ringkasan.tim} tim? Data sekarang disimpan dulu sebagai titik pulih.`, "Pulihkan")) {
+        await snapshot("Sebelum pulihkan titik pulih", true); db = migrate(JSON.parse(r.data)); db.orders.forEach(o => { toKotak(o); toLokasi(o); }); save(); applyTheme(); route(); toast("Data dipulihkan"); }
+      break; }
     case "install": if (installEvt) { installEvt.prompt(); const r = await installEvt.userChoice; installEvt = null; if (r.outcome !== "accepted") toast("Pemasangan dibatalkan"); route(); } break;
     case "installhide": try { localStorage.setItem("harvy_install_hide", String(Date.now() + 14 * 864e5)); } catch {} route(); break;
     case "pdf1": { const o = db.orders.find(x => x.id === id); downloadPdf([o], `Data Acara ${o.nama} ${o.tanggal || ""}`.trim(), "Data acara"); break; }
     case "selesai": { const o = db.orders.find(x => x.id === id); o.selesai = !o.selesai; save(); route(); toast(o.selesai ? "Ditandai selesai — masuk Arsip" : "Dikembalikan ke daftar acara"); break; }
     case "apdf": { const list = db.orders.filter(o => arsipState.sel.has(o.id)); downloadPdf(list, `Arsip ${db.settings.bizName} (${list.length} acara) ${todayStr()}`, "Arsip acara"); break; }
     case "adel": { const list = db.orders.filter(o => arsipState.sel.has(o.id)); if (!list.length) break;
-      if (await confirmBox(`${list.length} acara akan dihapus permanen dari perangkat ini dan tidak bisa dikembalikan. Saran: download PDF / backup dulu.`, `Hapus ${list.length} acara`)) { const ids = new Set(list.map(o => o.id)); db.orders = db.orders.filter(o => !ids.has(o.id)); arsipState.sel.clear(); save(); route(); toast(`${list.length} acara dihapus`); }
+      if (await confirmBox(`${list.length} acara akan dihapus permanen dari perangkat ini. Titik pulih otomatis dibuat dulu (Pengaturan → Data & Backup).`, `Hapus ${list.length} acara`)) { await snapshot(`Sebelum hapus ${list.length} acara arsip`, true); const ids = new Set(list.map(o => o.id)); db.orders = db.orders.filter(o => !ids.has(o.id)); arsipState.sel.clear(); save(); route(); toast(`${list.length} acara dihapus`); }
       break; }
     case "addtim": timModal(); break;
     case "edittim": timModal(timById(id)); break;
@@ -1321,10 +1396,12 @@ document.addEventListener("click", async e => {
     case "addwil": promptModal("Wilayah baru", "", v => { db.wilayah.push({ id: uid(), nama: v }); save(); route(); }); break;
     case "editwil": { const w = wilById(id); promptModal("Nama wilayah", w.nama, v => { w.nama = v; save(); route(); }); break; }
     case "resetdb": if (await confirmBox("Daftar tim resmi Harvy, paket, wilayah & perlengkapan dikembalikan ke data awal (Excel). Tim/paket buatan sendiri dihapus. Acara tidak dihapus.", "Kembalikan")) {
+        await snapshot("Sebelum kembalikan data awal", true);
         const tim0 = rosterList(); db.orders.forEach(o => { o.crew = (o.crew || []).map(id => { const t0 = timById(id), m = t0 && tim0.find(x => normNama(x.nama) === normNama(t0.nama)); return m ? m.id : null; }).filter(Boolean); });
         db.tim = tim0; db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); db.settings.rosterV3 = true; save(); route(); toast("Data awal Harvy dikembalikan"); } break;
-    case "wipeacara": if (await confirmBox(`${db.orders.length} acara (termasuk arsip) akan dihapus permanen. Sudah backup?`, "Hapus semua acara")) { db.orders = []; arsipState.sel.clear(); save(); route(); toast("Semua acara dihapus"); } break;
+    case "wipeacara": if (await confirmBox(`${db.orders.length} acara (termasuk arsip) akan dihapus permanen. Sudah backup?`, "Hapus semua acara")) { await snapshot("Sebelum hapus semua acara", true); db.orders = []; arsipState.sel.clear(); save(); route(); toast("Semua acara dihapus"); } break;
     case "wipe": if (await confirmBox("SEMUA acara, tim, paket, wilayah & perlengkapan akan dihapus permanen — aplikasi mulai dari kosong. Sudah backup?", "Kosongkan semua")) {
+        await snapshot("Sebelum kosongkan semua data", true);
         Object.assign(db, { orders: [], tim: [], paket: [], wilayah: [], addons: [] }); db.settings.rosterV3 = true; arsipState.sel.clear(); save(); route(); toast("Semua data dikosongkan"); } break;
   }
 });
@@ -1355,14 +1432,23 @@ function showUpdate() {
 }
 
 /* ---------- INIT ---------- */
-db.orders.forEach(o => { toKotak(o); toLokasi(o); }); save();
-applyTheme();
-route();
-if (db._imported) { const n = db._imported; delete db._imported; save(); setTimeout(() => toast(`${n} acara & data kru dari versi lama sudah dipindahkan`), 400); }
+(async function boot() {
+  // ambil data dari database perangkat (IndexedDB); pakai yang paling baru antara IndexedDB & cadangan localStorage
+  if (store.idb) {
+    try { const rec = await idb.get("data", "db"); if (rec) { const d = JSON.parse(rec); if ((d.savedAt || 0) >= (db.savedAt || 0)) db = migrate(d); } }
+    catch (e) { console.warn("IndexedDB", e); store.idb = false; }
+  }
+  store.ready = true;
+  db.orders.forEach(o => { toKotak(o); toLokasi(o); }); save();
+  applyTheme();
+  route();
+  if (db._imported) { const n = db._imported; delete db._imported; save(); setTimeout(() => toast(`${n} acara & data kru dari versi lama sudah dipindahkan`), 400); }
+  if (db.orders.length || db.tim.length) { try { if (!(await idb.get("snap", "d-" + todayStr()))) await snapshot(); } catch {} }
+})();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("sw.js").then(reg => {
     reg.addEventListener("updatefound", () => { const w = reg.installing; if (w) w.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) showUpdate(); }); });
     setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000); // cek versi baru tiap 30 menit saat online
   }).catch(() => {});
 }
-if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {});

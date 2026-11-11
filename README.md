@@ -30,7 +30,7 @@ Aplikasi admin **Harvy Wedding** (Solokuro, Lamongan) untuk menyusun jadwal acar
 | `js/pdf.js` | Membuat file PDF tanpa internet |
 | `sw.js`, `manifest.json`, `icons/` | Mode offline & ikon aplikasi |
 
-Data tersimpan di perangkat masing-masing (`localStorage`). Untuk pindah perangkat pakai **Pengaturan → Data & Backup**. Data dari versi lama (Mahligai WO) di perangkat yang sama dipindahkan otomatis saat pertama kali dibuka.
+Data tersimpan di perangkat masing-masing di **database perangkat (IndexedDB)** + salinan cadangan (`localStorage`), dengan **titik pulih otomatis** (harian 7 hari + sebelum hapus/reset/import/pulihkan) dan pengingat backup mingguan — lihat **Pengaturan → Data & Backup → Keamanan data**. Untuk pindah perangkat pakai **Pengaturan → Data & Backup**. Data dari versi lama (Mahligai WO) di perangkat yang sama dipindahkan otomatis saat pertama kali dibuka.
 
 **Saat mengubah file**: naikkan nomor versi `?v=` di `index.html` dan `CACHE_NAME` di `sw.js` supaya HP mengambil versi terbaru.
 

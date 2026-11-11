@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "62";
+const APP_VERSION = "63";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -221,7 +221,11 @@ const newLok = (x = {}) => Object.assign({ id: uid(), jenis: "both", namaAcara: 
 const lokOf = o => (Array.isArray(o.lokasi) && o.lokasi.length ? o.lokasi : []);
 const lokJudul = l => l.jenis === "lain" ? (String(l.namaAcara || "").trim() || "Acara lain") : (LJENIS.find(x => x[0] === l.jenis) || LJENIS[0])[1];
 const akadDi = l => String(l.tempatAkad || "").trim() ? ` (di ${String(l.tempatAkad).trim().replace(/^di\s+/i, "")})` : "";
-const lokJam = l => l.jenis === "both" ? [["Akad", (l.jamAkad || "") + akadDi(l)], ["Resepsi", l.jamResepsi]] : l.jenis === "akad" ? [["Akad", (l.jamAkad || "") + akadDi(l)]] : l.jenis === "resepsi" ? [["Resepsi", l.jamResepsi]] : [[lokJudul(l), l.jam]];
+/* jam dipilih dengan pemilih jam ("07:00"); isian lama berupa teks tetap dipakai apa adanya */
+const isJam = v => /^\d{1,2}:\d{2}$/.test(String(v || "").trim());
+const jamFmt = v => isJam(v) ? String(v).trim().padStart(5, "0").replace(":", ".") + " WIB" : String(v || "").trim();
+const normJam = v => { if (typeof v === "number" && v >= 0 && v < 1) { const m = Math.round(v * 1440); return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; } const s = String(v ?? "").trim(), x = s.match(/^(\d{1,2})[:.](\d{2})(?:\s*WIB)?$/i); return x ? `${x[1].padStart(2, "0")}:${x[2]}` : s; };
+const lokJam = l => l.jenis === "both" ? [["Akad", jamFmt(l.jamAkad) + akadDi(l)], ["Resepsi", jamFmt(l.jamResepsi)]] : l.jenis === "akad" ? [["Akad", jamFmt(l.jamAkad) + akadDi(l)]] : l.jenis === "resepsi" ? [["Resepsi", jamFmt(l.jamResepsi)]] : [[lokJudul(l), jamFmt(l.jam)]];
 const lokKe = o => String(o.lokasiKe || "").trim();
 const lokLabel = o => "LOKASI" + (lokKe(o) ? " " + lokKe(o) : "");
 const lokTempat = l => [l.tempat, l.alamat].map(x => String(x || "").trim()).filter(Boolean).join(", ");
@@ -576,6 +580,7 @@ function vForm(id) {
   </form>`;
 }
 const groupBy = (arr, k) => arr.reduce((a, x) => ((a[x[k] || "Lainnya"] = a[x[k] || "Lainnya"] || []).push(x), a), {});
+const jamIn = (i, f, label) => { const v = draft.lokasi[i][f] || ""; return `<label class="f">${label}<input class="in" type="time" step="300" data-lk="${i}.${f}" value="${isJam(v) ? esc(normJam(v)) : ""}">${v && !isJam(v) ? `<span class="small muted" style="font-weight:400">Isian lama: “${esc(v)}” — pilih jam untuk mengganti</span>` : ""}</label>`; };
 const lin = (i, f, label, ph, extra = "") => `<label class="f">${label}<input class="in" data-lk="${i}.${f}" value="${esc(draft.lokasi[i][f] || "")}" placeholder="${esc(ph)}" ${extra}></label>`;
 function lokasiFields() {
   const l = draft.lokasi[0], i = 0;
@@ -587,9 +592,9 @@ function lokasiFields() {
     </div>
     <div class="chips" style="margin-bottom:12px">${LJENIS.map(([k, n]) => `<span class="chip ${l.jenis === k ? "on" : ""}" data-ljenis="${i}.${k}">${l.jenis === k ? ic("check") : ""}${n}</span>`).join("")}</div>
     <div class="grid g3">
-      ${l.jenis === "lain" ? lin(i, "namaAcara", "Nama acara", "mis. Ngunduh mantu") + lin(i, "jam", "Jam", "mis. malam jam 7") : ""}
-      ${l.jenis === "both" || l.jenis === "akad" ? lin(i, "jamAkad", "Jam akad", "mis. pagi jam 7") : ""}
-      ${l.jenis === "both" || l.jenis === "resepsi" ? lin(i, "jamResepsi", "Jam resepsi", "mis. pagi jam 10") : ""}
+      ${l.jenis === "lain" ? lin(i, "namaAcara", "Nama acara", "mis. Ngunduh mantu") + jamIn(i, "jam", "Jam") : ""}
+      ${l.jenis === "both" || l.jenis === "akad" ? jamIn(i, "jamAkad", "Jam akad") : ""}
+      ${l.jenis === "both" || l.jenis === "resepsi" ? jamIn(i, "jamResepsi", "Jam resepsi") : ""}
       ${l.jenis === "both" ? lin(i, "tempatAkad", "Tempat akad (kalau beda)", "mis. masjid") : ""}
     </div>
     <div class="grid g2" style="margin-top:12px">${lin(i, "tempat", "Tempat", "mis. Kediaman mempelai wanita", 'list="dl-tempat"')}${lin(i, "alamat", "Alamat", "mis. Desa Sawu RT 17 / RW 8, Dukun, Gresik")}</div>
@@ -884,10 +889,10 @@ function acaraCols() {
     { h: "Bapak", w: 16, get: o => o.bapak, set: (o, v) => { o.bapak = sv(v); } },
     { h: "Ibu", w: 16, get: o => o.ibu, set: (o, v) => { o.ibu = sv(v); } },
     { h: "Acara", w: 15, get: o => lokJudul(L(o)), set: (o, v) => { const k = JENIS_LABEL[sv(v).toLowerCase()]; setL(o, "jenis", k || (sv(v) ? "lain" : "both")); if (!k && sv(v)) o.lokasi[0].namaAcara = sv(v); } },
-    { h: "Jam akad", w: 13, get: o => L(o).jamAkad, set: (o, v) => setL(o, "jamAkad", v) },
+    { h: "Jam akad", w: 13, get: o => L(o).jamAkad, set: (o, v) => setL(o, "jamAkad", normJam(v)) },
     { h: "Tempat akad (kalau beda)", w: 16, get: o => L(o).tempatAkad, set: (o, v) => setL(o, "tempatAkad", v) },
-    { h: "Jam resepsi", w: 13, get: o => L(o).jamResepsi, set: (o, v) => setL(o, "jamResepsi", v) },
-    { h: "Jam acara lain", w: 13, get: o => L(o).jenis === "lain" ? L(o).jam : "", set: (o, v) => setL(o, "jam", v) },
+    { h: "Jam resepsi", w: 13, get: o => L(o).jamResepsi, set: (o, v) => setL(o, "jamResepsi", normJam(v)) },
+    { h: "Jam acara lain", w: 13, get: o => L(o).jenis === "lain" ? L(o).jam : "", set: (o, v) => setL(o, "jam", normJam(v)) },
     { h: "Tempat", w: 22, type: "wrap", get: o => L(o).tempat, set: (o, v) => setL(o, "tempat", v) },
     { h: "Alamat", w: 34, type: "wrap", get: o => L(o).alamat, set: (o, v) => setL(o, "alamat", v) },
     { h: "Link Google Maps", w: 30, get: o => L(o).maps, set: (o, v) => setL(o, "maps", ambilLink(v)) },

@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "65";
+const APP_VERSION = "66";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -337,7 +337,7 @@ function waBriefing(o, show = db.settings.waShow) {
   ]);
   sec("🚚 *PERLENGKAPAN DIBAWA:*", kisi(o, "perlengkapan").map((x, i) => `${i + 1}. ${x}`));
   sec("👥 *TIM KRU BERTUGAS:*", teamOf(o).map((t, i) => `${i + 1}. ${teamLine(t)}`));
-  sec("📝 *KETERANGAN:*", kisi(o, "nb").map(x => "• " + x));
+  sec("📝 *KETERANGAN:*", [...kisi(o, "nb").map(x => "• " + x), ...lines(o.keterangan)]);
   if (s.footer.trim()) { L.push(GAR); L.push(s.footer.trim()); L.push(""); }
   const adm = s.hpAdmin || s.hpOwner;
   if (show.admin && adm) { L.push(GAR); L.push("📞 *NARAHUBUNG ADMIN WO:*"); L.push(`Admin ${s.bizName} (${adm})`); L.push(`Chat WA: https://wa.me/${waNum(adm)}`); }
@@ -375,6 +375,7 @@ function waKlasik(o, show = db.settings.waShow) {
   otherBoxes(o).forEach(b => L.push(`*${b.judul || "Lainnya"}* : ${lines(b.isi).map(x => x.replace(BUL, "")).join(", ")}`));
   const nb = kisi(o, "nb");
   if (nb.length) { L.push(""); L.push("Nb :"); nb.forEach(x => L.push(`- ${x}`)); }
+  if (lines(o.keterangan).length) { L.push(""); L.push("*Keterangan* :"); lines(o.keterangan).forEach(x => L.push(x)); }
   const jm = kisi(o, "makeup");
   if (jm.length) { L.push(""); jm.forEach(x => L.push(`- ${x}`)); }
   const pl = kisi(o, "perlengkapan");
@@ -529,7 +530,7 @@ function vDetail(id) {
       </div>
       <div class="card"><h2>Data pengantin</h2><dl class="kv">
         ${kv("IG", o.ig)}${kv("TikTok", o.tiktok)}${kv("Bapak", o.bapak)}${kv("Ibu", o.ibu)}${kv("No. HP", o.hp)}${lokOf(o).map(l => kv(lokKe(o) ? `Lokasi ${esc(lokKe(o))}` : "Lokasi", [lokJudul(l) + ": " + lokJam(l).map(([n, j]) => [n, j].filter(x => isi(x)).join(" ")).join(", "), l.tempat, l.alamat, isi(l.maps) || "link lokasi belum ada"].filter(x => isi(x)).join("\n"))).join("")}${o.acaraMalam ? kv("Acara malam", "Ada") : ""}${kv("Paket", paketLabel(o))}
-        ${kv("Tim", teamOf(o).map(teamLine).join("\n"))}${(o.kotak || []).filter(b => lines(b.isi).length).map(b => kv(esc(b.judul || "Lainnya"), lines(b.isi).map(x => x.replace(BUL, "")).join("\n"))).join("")}</dl></div>
+        ${kv("Tim", teamOf(o).map(teamLine).join("\n"))}${isi(o.keterangan) ? kv("Keterangan", o.keterangan) : ""}${(o.kotak || []).filter(b => lines(b.isi).length).map(b => kv(esc(b.judul || "Lainnya"), lines(b.isi).map(x => x.replace(BUL, "")).join("\n"))).join("")}</dl></div>
     </div>
     <div class="grid" style="align-content:start">
 ${missing(o).length ? `      <div class="card" style="border-color:var(--warn)"><h2>Belum lengkap</h2><p class="small muted" style="margin:0 0 10px">Masih kosong: <b>${esc(missing(o).join(", "))}</b></p><a class="btn sm gold" href="#/acara/${esc(o.id)}/edit">${ic("edit")}Lengkapi</a></div>` : ""}
@@ -547,7 +548,7 @@ function checklistItems(o) {
 /* ---------- FORM ---------- */
 let draft = null;
 function blankOrder() {
-  return { id: uid(), dibuat: Date.now(), tanggal: "", nama: "", ig: "", tiktok: "", bapak: "", ibu: "", hp: "", dsn: "", rt: "", rw: "", desa: "", kec: "", kab: "", lokasiAkad: "", jamAkad: "", jamResepsi: "", acaraMalam: false, lokasiKe: "", lokasi: null, kotak: null, paketMode: "", jenisAcara: "both", alamatLain: "", mapsLink: "", wilayahId: (db && db.wilayah[0]?.id) || "w1", paketId: "", paketNama: "", hargaPaket: 0, isiPaket: "", dekor: "", gaun: [{ baju: "", pasangan: "", hijab: "" }], gaunCatatan: "", melati: "", melatiReq: "", melatiHarga: 0, mc: "", foto: "", shot: "", hena: "", crew: [], tambahan: [], potongan: [], transport: 0, bayar: [], nb: "", jadwalMakeup: "", perlengkapan: "", batal: false, absen: {}, cek: {} };
+  return { id: uid(), dibuat: Date.now(), tanggal: "", nama: "", ig: "", tiktok: "", bapak: "", ibu: "", hp: "", dsn: "", rt: "", rw: "", desa: "", kec: "", kab: "", lokasiAkad: "", jamAkad: "", jamResepsi: "", acaraMalam: false, lokasiKe: "", keterangan: "", lokasi: null, kotak: null, paketMode: "", jenisAcara: "both", alamatLain: "", mapsLink: "", wilayahId: (db && db.wilayah[0]?.id) || "w1", paketId: "", paketNama: "", hargaPaket: 0, isiPaket: "", dekor: "", gaun: [{ baju: "", pasangan: "", hijab: "" }], gaunCatatan: "", melati: "", melatiReq: "", melatiHarga: 0, mc: "", foto: "", shot: "", hena: "", crew: [], tambahan: [], potongan: [], transport: 0, bayar: [], nb: "", jadwalMakeup: "", perlengkapan: "", batal: false, absen: {}, cek: {} };
 }
 const fi = (k, label, ph = "", type = "text", extra = "") => `<label class="f">${label}<input class="in" data-b="${k}" type="${type}" value="${esc(draft[k])}" placeholder="${esc(ph)}" ${extra}></label>`;
 const dl = (id, arr) => `<datalist id="${id}">${[...new Set(arr)].map(x => `<option value="${esc(x)}">`).join("")}</datalist>`;
@@ -572,6 +573,7 @@ function vForm(id) {
     ${dl("dl-tempat", ["Kediaman mempelai wanita", "Kediaman mempelai pria", "Masjid", "Gedung", "KUA", ...db.orders.flatMap(o => lokOf(o).map(l => l.tempat)).filter(Boolean)])}`)}
   ${sec("k", 3, "Paket & isi acara", `<div id="paketBox">${paketFields()}</div>`)}
   ${sec("t", 4, "Tim bertugas", `<div id="timBox">${timFields()}</div>`)}
+  ${sec("ket", 5, "Keterangan <span class=\"small muted\" style=\"font-family:var(--sans);font-weight:500\">(opsional)</span>", `<label class="f">Catatan bebas — kalau diisi ikut tampil di pesan WA & PDF<textarea class="in" data-b="keterangan" rows="3" placeholder="mis. Pelanggan minta datang 1 jam lebih awal, parkir di belakang rumah, dll.">${esc(draft.keterangan || "")}</textarea></label>`)}
   <div class="card fsec" id="hasilCard"><div class="hd"><span class="n">${ic("wa")}</span><h2>Hasil untuk grup WA</h2></div>
     <div class="wa-prev"><div class="bubble" id="formWA"></div></div>
     <div class="row" style="margin-top:12px"><button class="btn wa grow" type="button" data-act="formshare">${ic("share")}Kirim / Bagikan</button><button class="btn grow" type="button" data-act="formcopy">${ic("copy")}Salin teks</button></div>
@@ -928,6 +930,7 @@ function acaraCols() {
         else Object.assign(o, { paketMode: nama ? "custom" : "", paketId: "", paketNama: nama });
       } },
     ...KOTAK.map(([k, j]) => ({ h: j, w: k === "gaun" ? 34 : 26, type: "wrap", get: o => isiKotak(kot(o, k)), set: (o, v) => { ensureKotak(o); kot(o, k).isi = sv(v); } })),
+    { h: "Keterangan", w: 30, type: "wrap", get: o => o.keterangan || "", set: (o, v) => { o.keterangan = sv(v); } },
     { h: "Kotak lain", w: 30, type: "wrap", get: o => (o.kotak || []).filter(b => !KOTAK.some(([k]) => k === b.k) && lines(b.isi).length).map(b => `${b.judul || "Lainnya"}:\n${isiKotak(b)}`).join("\n\n"),
       set: (o, v) => { ensureKotak(o); o.kotak = o.kotak.filter(b => KOTAK.some(([k]) => k === b.k)); sv(v).split(/\n\s*\n/).forEach(bl => { const L2 = lines(bl); if (!L2.length) return; const head = /:$/.test(L2[0]) ? L2.shift().replace(/:$/, "") : "Lainnya"; o.kotak.push({ k: "c_" + uid(), judul: head, isi: L2.join("\n") }); }); } },
     ...ROLES.map(r => ({ h: "Tim: " + r, w: 18, type: "wrap", role: r, get: o => teamOf(o).filter(t => t.peran === r).map(t => t.nama).join("\n") })),
@@ -1258,6 +1261,7 @@ function pdfAcara(list, judul, logo) {
       boxes.forEach(b => row(b.judul || "Lainnya", lines(b.isi).map(x => "•  " + x.replace(BUL, "")).join("\n")));
       y += 8; zebra = false;
     }
+    if (isi(o.keterangan)) { sectionTitle("Keterangan"); row("Keterangan", o.keterangan); y += 8; zebra = false; }
     if (team.length) {
       sectionTitle("Tim bertugas");
       const byR = {}; team.forEach(t => (byR[t.peran] = byR[t.peran] || []).push(t.nama + (t.hp ? `  (${t.hp})` : "")));

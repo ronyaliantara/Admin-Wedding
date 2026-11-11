@@ -1,14 +1,14 @@
 // Service worker Harvy Wedding Organizer — membuat aplikasi tetap jalan tanpa internet.
 // Naikkan nomor versi setiap kali ada update agar HP mengambil file terbaru.
-const CACHE_NAME = 'harvy-wo-v66';
+const CACHE_NAME = 'harvy-wo-v67';
 const ASSETS = [
   './',
   './index.html',
-  './css/style.css?v=66',
-  './js/data.js?v=66',
-  './js/excel.js?v=66',
-  './js/pdf.js?v=66',
-  './js/app.js?v=66',
+  './css/style.css?v=67',
+  './js/data.js?v=67',
+  './js/excel.js?v=67',
+  './js/pdf.js?v=67',
+  './js/app.js?v=67',
   './manifest.json',
   './icons/logo.jpg',
   './icons/icon-192.png',

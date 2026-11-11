@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "66";
+const APP_VERSION = "67";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -270,6 +270,7 @@ function acaraStr(o) {
 function missing(o) {
   const m = [], L = lokOf(o);
   if (!o.tanggal) m.push("tanggal");
+  if (!lokKe(o)) m.push("lokasi ke-");
   if (!L.length) m.push("lokasi");
   L.forEach(l => {
     if (!lokTempat(l)) m.push("alamat");
@@ -589,7 +590,7 @@ function lokasiFields() {
   const lain = draft.tanggal ? db.orders.filter(o => o.id !== draft.id && !o.batal && o.tanggal === draft.tanggal) : [];
   return `<div class="lok">
     <div class="grid g3" style="margin-bottom:12px">
-      <label class="f">Lokasi ke- (isi manual)<input class="in" data-b="lokasiKe" inputmode="numeric" value="${esc(draft.lokasiKe || "")}" placeholder="${lain.length ? `mis. ${lain.length + 1}` : "mis. 1"}"></label>
+      <label class="f">Lokasi ke- <span class="wajib">* wajib</span><input class="in" data-b="lokasiKe" required inputmode="numeric" value="${esc(draft.lokasiKe || "")}" placeholder="${lain.length ? `mis. ${lain.length + 1}` : "mis. 1"}"></label>
       <div class="f small muted" style="grid-column:span 2;justify-content:flex-end;padding-bottom:6px">${lain.length ? `Di tanggal ini sudah ada ${lain.length} acara lain: ${lain.map(o => `<b>${esc(o.nama)}</b>${lokKe(o) ? ` (Lokasi ${esc(lokKe(o))})` : ""}`).join(", ")}` : "Nomor urut pelanggan di hari yang sama (Lokasi 1, 2, 3…). Muncul di judul pesan grup."}</div>
     </div>
     <div class="chips" style="margin-bottom:12px">${LJENIS.map(([k, n]) => `<span class="chip ${l.jenis === k ? "on" : ""}" data-ljenis="${i}.${k}">${l.jenis === k ? ic("check") : ""}${n}</span>`).join("")}</div>
@@ -779,6 +780,7 @@ const grow = el => { el.style.height = "auto"; el.style.height = el.scrollHeight
 const growAll = (root = document) => $$("textarea.kt", root).forEach(grow);
 function saveForm() {
   if (!draft.nama.trim()) { toast("Isi nama manten dulu"); $('[data-b="nama"]')?.focus(); return; }
+  if (!lokKe(draft)) { toast("Isi Lokasi ke- dulu (mis. 1)"); draft._open = { ...(draft._open || {}), a: true }; const s = $('[data-sec="a"]'); if (s) s.open = true; const f = $('[data-b="lokasiKe"]'); if (f) { f.scrollIntoView({ block: "center" }); f.focus(); f.classList.add("err"); } return; }
   const o = JSON.parse(JSON.stringify(draft)); delete o._for; delete o._open;
   const i = db.orders.findIndex(x => x.id === o.id);
   if (i >= 0) db.orders[i] = o; else db.orders.push(o);
@@ -1325,6 +1327,7 @@ window.addEventListener("hashchange", () => { $$(".modal-bg").forEach(m => m.rem
 /* ---------- EVENTS ---------- */
 document.addEventListener("input", e => {
   const t = e.target;
+  if (t.classList && t.classList.contains("err")) t.classList.remove("err");
   if (t.id === "aq") { arsipState.q = t.value; const w = $("#alist"), tmp = document.createElement("div"); tmp.innerHTML = vArsip(); const nw = $("#alist", tmp); if (w && nw) w.innerHTML = nw.innerHTML; return; }
   if (t.id === "q") { listState.q = t.value; const w = $("#listwrap"), tmp = document.createElement("div"); tmp.innerHTML = vAcara(); const nw = $("#listwrap", tmp); if (w && nw) w.innerHTML = nw.innerHTML; return; }
   if (draft && t.dataset.b) { draft[t.dataset.b] = t.type === "checkbox" ? t.checked : t.hasAttribute("data-money") ? num(t.value) : t.value; if (t.dataset.b === "tanggal") { rerenderPart("timBox", timFields); rerenderPart("lokasiBox", lokasiFields); } updTotal(); }

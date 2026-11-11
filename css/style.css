@@ -333,3 +333,5 @@ button.kdd{cursor:pointer}
 .savebar .miss{border:0;background:var(--warn-soft);color:var(--warn);font-weight:700;font-size:12.5px;padding:6px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .savebar .ok-mini{font-size:12.5px;font-weight:700;color:var(--ok);white-space:nowrap}
 @media (max-width:900px){.savebar{bottom:calc(80px + env(safe-area-inset-bottom))}}
+.wajib{color:var(--bad);font-weight:700;font-size:11.5px}
+.in.err{border-color:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 20%,transparent)}

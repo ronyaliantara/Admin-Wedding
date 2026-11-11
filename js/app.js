@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "61";
+const APP_VERSION = "62";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -21,12 +21,12 @@ const parseD = s => { if (!s) return null; const [y, m, d] = s.split("-").map(Nu
 const fmtD = (s, o = { weekday: "long", day: "numeric", month: "long", year: "numeric" }) => s ? parseD(s).toLocaleDateString("id-ID", o) : "Belum ada tanggal";
 const daysTo = s => s ? Math.round((parseD(s) - parseD(todayStr())) / 864e5) : null;
 const lines = t => String(t || "").split("\n").map(x => x.trim()).filter(Boolean);
-const ROLES = ["MUA", "Crew Rias", "Asisten", "Admin", "MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone", "Dekor", "Sopir", "Lainnya"];
+const ROLES = ["MUA", "Asisten", "Crew Rias", "Admin", "MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone", "Dekor", "Sopir", "Lainnya"];
 /* Daftar tim Harvy (bisa diubah di Pengaturan → Tim) */
 const ROSTER = {
   "MUA": ["Harvy"],
-  "Crew Rias": ["Buk Um", "Sari", "Maya", "Nisaul", "Isti", "Rina", "Lany", "Marisna", "Lia", "Dewi", "Nadin", "Isa", "Kosna", "Tiya"],
   "Asisten": ["Puput", "Nanda"],
+  "Crew Rias": ["Buk Um", "Sari", "Maya", "Nisaul", "Isti", "Rina", "Lany", "Marisna", "Lia", "Dewi", "Nadin", "Isa", "Kosna", "Tiya"],
   "Admin": ["Yenny", "Efi", "Gita"],
   "MC": ["Syafi'i", "Rozy", "Rully", "Shofi", "Supandi", "Andik", "Mudi", "Yazid", "Teguh", "Dimas", "Sukir", "Siti", "Sony", "Malik", "Adhim"],
   "Foto": ["Harry Photografer", "Zubeth", "Aang Angkasa", "Panoramic", "Bey (JRA)", "Jeck Potret"],

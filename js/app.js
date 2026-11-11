@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "64";
+const APP_VERSION = "65";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -767,7 +767,7 @@ function pickTeam(ids, tanggal, exceptId, onSave) {
 function updTotal() {
   const el = $("#totbox"); if (!el) return; const m = missing(draft);
   updatePreview();
-  el.innerHTML = m.length ? `<small>Belum diisi</small><b class="small" style="font-size:14px">${esc(m.join(", "))}</b>` : `<small>Status</small><b style="font-size:15px">Siap dikirim ke grup ✓</b>`;
+  el.innerHTML = m.length ? `<button type="button" class="miss" data-act="showmiss" title="${esc(m.join(", "))}">⚠ ${m.length} belum diisi</button>` : `<span class="ok-mini">✓ Siap dikirim</span>`;
 }
 let _pv = 0;
 function updatePreview() { clearTimeout(_pv); _pv = setTimeout(() => { const el = $("#formWA"); if (el && draft) el.innerHTML = waFmt(waCrew(draft)); }, 120); }
@@ -1405,6 +1405,7 @@ document.addEventListener("click", async e => {
     case "exportcsv": case "exportxlsx": exportExcel(); break;
     case "logoreset": delete db.settings.logo; save(); applyTheme(); route(); break;
     case "backup": backupData(); route(); break;
+    case "showmiss": if (draft) toast("Belum diisi: " + missing(draft).join(", ")); break;
     case "bkhide": try { localStorage.setItem("harvy_bk_hide", String(Date.now() + 3 * 864e5)); } catch {} route(); break;
     case "persist": { const ok = navigator.storage && navigator.storage.persist ? await navigator.storage.persist() : false; toast(ok ? "Izin penyimpanan permanen diberikan ✓" : isIOS ? "Di iPhone/iPad: pasang aplikasi ke Layar Utama" : "Browser belum memberi izin — pasang aplikasinya lalu coba lagi"); loadKeamanan(); break; }
     case "snaprestore": { const r = await idb.get("snap", id); if (!r) { toast("Titik pulih tidak ditemukan"); break; }

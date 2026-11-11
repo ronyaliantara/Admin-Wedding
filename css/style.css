@@ -327,3 +327,9 @@ textarea.mi{resize:none;overflow:hidden;line-height:1.4;field-sizing:content;dis
 .kp-chips .chip.tap{transform:scale(.94);background:var(--gold);color:var(--on-gold)}
 button.kdd{cursor:pointer}
 #kpUndo[disabled]{opacity:.45}
+/* bar simpan ringkas */
+.savebar{padding:6px 8px 6px 12px;gap:8px}
+.savebar .btn{min-height:40px;padding:8px 14px}
+.savebar .miss{border:0;background:var(--warn-soft);color:var(--warn);font-weight:700;font-size:12.5px;padding:6px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.savebar .ok-mini{font-size:12.5px;font-weight:700;color:var(--ok);white-space:nowrap}
+@media (max-width:900px){.savebar{bottom:calc(80px + env(safe-area-inset-bottom))}}

@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "68";
+const APP_VERSION = "69";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -21,12 +21,13 @@ const parseD = s => { if (!s) return null; const [y, m, d] = s.split("-").map(Nu
 const fmtD = (s, o = { weekday: "long", day: "numeric", month: "long", year: "numeric" }) => s ? parseD(s).toLocaleDateString("id-ID", o) : "Belum ada tanggal";
 const daysTo = s => s ? Math.round((parseD(s) - parseD(todayStr())) / 864e5) : null;
 const lines = t => String(t || "").split("\n").map(x => x.trim()).filter(Boolean);
-const ROLES = ["MUA", "Asisten", "Crew Rias", "Admin", "MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone", "Dekor", "Sopir", "Lainnya"];
+const ROLES = ["MUA", "Asisten", "Crew Rias", "Manager", "Admin", "MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone", "Dekor", "Sopir", "Lainnya"];
 /* Daftar tim Harvy (bisa diubah di Pengaturan → Tim) */
 const ROSTER = {
   "MUA": ["Harvy"],
   "Asisten": ["Puput", "Nanda"],
   "Crew Rias": ["Buk Um", "Sari", "Maya", "Nisaul", "Isti", "Rina", "Lany", "Marisna", "Lia", "Dewi", "Nadin", "Isa", "Kosna", "Tiya"],
+  "Manager": ["Hary"],
   "Admin": ["Yenny", "Efi", "Gita"],
   "MC": ["Syafi'i", "Rozy", "Rully", "Shofi", "Supandi", "Andik", "Mudi", "Yazid", "Teguh", "Dimas", "Sukir", "Siti", "Sony", "Malik", "Adhim"],
   "Foto": ["Harry Photografer", "Zubeth", "Aang Angkasa", "Panoramic", "Bey (JRA)", "Jeck Potret"],
@@ -72,6 +73,7 @@ function defaultDB() {
       makeup: ["Manten siap dimake up jam … pagi", "Terima tamu dll siap dimake up jam … pagi", "Orang tua & besan dimake up jam … pagi", "Retouch make up resepsi jam …"],
       gaun: ["Putih kebaya", "Navy jarik", "Navy new jarik", "Emerald green", "Ivory new", "Reza jarik sorot"],
       pasangan: ["Blangkon", "Jas putih", "Jas ivory", "Jas emerald green", "Jas navy", "Beskap"],
+      ukuran: ["S", "M", "L", "XL", "XXL", "L slim", "XL slim", "All size"],
       hijab: ["Hijab solo", "Hijab modern", "Hijab simple", "Tanpa hijab"],
       melati: ["Solo Putri", "Sunda Siger", "Biasa (bukan adat)"]
     },
@@ -85,7 +87,7 @@ function load() {
   try { importOldApp(d); } catch (e) { console.warn("Import data lama gagal", e); }
   d.orders.forEach(o => linkLegacy(d, o));
   removeDemoPeople(d); mergeDupes(d);
-  d.settings.rosterV3 = true;
+  d.settings.rosterV4 = true;
   return d;
 }
 /* Pindahkan data dari versi lama (Mahligai WO) yang tersimpan di perangkat ini — hanya sekali */
@@ -147,20 +149,25 @@ function importOldApp(d) {
 }
 function migrate(d) {
   const def = defaultDB();
-  const needRoster = !(d.settings && d.settings.rosterV3);
+  const needRoster = !(d.settings && d.settings.rosterV4);
   for (const k of ["wilayah", "paket", "addons", "tim", "orders"]) if (!Array.isArray(d[k])) d[k] = def[k];
   d.settings = Object.assign({}, def.settings, d.settings || {});
   d.settings.waShow = Object.assign({}, def.settings.waShow, d.settings.waShow || {});
   d.katalog = Object.assign({}, def.katalog, d.katalog || {});
   removeDemoPeople(d); mergeDupes(d);
-  d.tim.forEach(x => { if (x.peran === "Crew") x.peran = "Crew Rias"; if (!ROLES.includes(x.peran)) x.peran = "Lainnya"; });
+  d.tim.forEach(x => { if (x.peran === "Crew") x.peran = "Crew Rias"; if (!String(x.peran || "").trim()) x.peran = "Lainnya"; });
   if (!d.settings.fakeNail) { // istilah "nail art" diganti "fake nail" (sekali)
     const fx = s => typeof s === "string" ? s.replace(/nail art/gi, m => m[0] === "N" ? "Fake nail" : "fake nail") : s;
     d.paket.forEach(pk => { pk.isi = fx(pk.isi); pk.deskripsi = fx(pk.deskripsi); });
     d.orders.forEach(o => { (o.kotak || []).forEach(b => { b.isi = fx(b.isi); }); o.isiPaket = fx(o.isiPaket); });
     d.settings.fakeNail = true;
   }
-  if (needRoster) { rosterList().forEach(r => { if (!d.tim.some(x => normNama(x.nama) === normNama(r.nama))) d.tim.push(r); }); d.settings.rosterV3 = true; }
+  if (needRoster) {
+    // perangkat lama (sudah punya daftar tim): hanya tambah orang baru di daftar resmi (Manager: Hary); jangan isi ulang tim yang sengaja dikosongkan
+    const baru = d.settings.rosterV3 ? (d.tim.length ? rosterList().filter(r => r.peran === "Manager") : []) : rosterList();
+    baru.forEach(r => { if (!d.tim.some(x => normNama(x.nama) === normNama(r.nama))) d.tim.push(r); });
+    d.settings.rosterV4 = true;
+  }
   d.orders.forEach(o => linkLegacy(d, o));
   canonTim(d);
   return d;
@@ -286,7 +293,9 @@ function statusOf(o) {
   return [`${(o.crew || []).length} kru`, "ok"];
 }
 const WA_FIELDS = [["tanggal", "Tanggal"], ["ig", "IG"], ["tiktok", "TikTok"], ["ortu", "Orang tua"], ["hp", "No HP"], ["alamat", "Alamat"], ["maps", "Link lokasi"], ["paket", "Paket"], ["admin", "Kontak admin"]];
-const roleIdx = r => { const i = ROLES.indexOf(r); return i < 0 ? 99 : i; };
+/* semua jabatan: daftar baku + jabatan yang diketik sendiri (diletakkan sebelum "Lainnya") */
+function allRoles() { const extra = [...new Set((db ? db.tim : []).map(t => t.peran).filter(r => r && !ROLES.includes(r)))].sort(); const i = ROLES.indexOf("Lainnya"); return [...ROLES.slice(0, i), ...extra, ...ROLES.slice(i)]; }
+const roleIdx = r => { const i = allRoles().indexOf(r); return i < 0 ? 999 : i; };
 const teamOf = o => (o.crew || []).map(id => timById(id)).filter(Boolean).sort((a, b) => roleIdx(a.peran) - roleIdx(b.peran));
 const NON_CREW = ["MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone"];
 const crewNames = o => teamOf(o).filter(t => !NON_CREW.includes(t.peran)).map(t => t.nama);
@@ -486,7 +495,7 @@ function vDashboard() {
   const hr = now.getHours(), salam = hr < 11 ? "Selamat pagi" : hr < 15 ? "Selamat siang" : hr < 18 ? "Selamat sore" : "Selamat malam";
   const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() + i, 1); const k = ymd(d).slice(0, 7); return { l: d.toLocaleDateString("id-ID", { month: "short" }), n: act.filter(o => (o.tanggal || "").startsWith(k)).length }; });
   const mx = Math.max(1, ...months.map(m => m.n));
-  return `${mtop()}${installCard()}${backupReminder()}<div class="top"><div><h1>${salam} ✨</h1><p>${fmtD(t)}</p></div>
+  return `${mtop()}${draftCard()}${installCard()}${backupReminder()}<div class="top"><div><h1>${salam} ✨</h1><p>${fmtD(t)}</p></div>
     <div class="row noprint"><button class="btn" data-act="rekap">${ic("wa")}Rekap 1 bulan ke depan</button><a class="btn gold" href="#/acara/baru">${ic("plus")}Acara Baru</a></div></div>
   ${next ? `<div class="card today" style="margin-bottom:16px"><div class="lbl">${daysTo(next.tanggal) === 0 ? "Acara hari ini" : "Acara terdekat · H-" + daysTo(next.tanggal)}</div>
     <h2 class="sec-h">${esc(next.nama)}</h2><div class="muted">${fmtD(next.tanggal)} · ${esc(alamatStr(next) || "-")}</div>
@@ -565,6 +574,32 @@ function checklistItems(o) {
 }
 
 /* ---------- FORM ---------- */
+/* simpan otomatis isian form (jaga-jaga kepencet keluar / aplikasi tertutup) */
+const DKEY = "harvy_wo_draft";
+const draftClean = d => { const o = JSON.parse(JSON.stringify(d)); Object.keys(o).forEach(k => { if (k.startsWith("_")) delete o[k]; }); return o; };
+const readDraft = () => { try { return JSON.parse(localStorage.getItem(DKEY) || "null"); } catch { return null; } };
+const clearDraft = () => { try { localStorage.removeItem(DKEY); } catch {} };
+const draftDirty = () => !!draft && JSON.stringify(draftClean(draft)) !== draft._base;
+let _ds = 0;
+function saveDraftNow() {
+  clearTimeout(_ds); if (!draft) return;
+  const data = draftClean(draft);
+  if (JSON.stringify(data) === draft._base) return;
+  try { localStorage.setItem(DKEY, JSON.stringify({ for: draft._for, at: Date.now(), nama: data.nama, data })); } catch {}
+}
+const saveDraftSoon = () => { clearTimeout(_ds); _ds = setTimeout(saveDraftNow, 400); };
+function startDraft(d, forKey) {
+  d._for = forKey; d._base = JSON.stringify(draftClean(d));
+  const s = readDraft();
+  if (s && s.for === forKey && s.data) { Object.assign(d, s.data); d._restored = s.at; }
+  return d;
+}
+function draftCard() {
+  const s = readDraft(); if (!s) return "";
+  if (s.for !== "new" && !db.orders.some(o => o.id === s.for)) { clearDraft(); return ""; }
+  const url = s.for === "new" ? "#/acara/baru" : `#/acara/${esc(s.for)}/edit`;
+  return `<div class="card install"><div class="avatar" style="width:46px;height:46px">${ic("edit")}</div><div class="grow"><b>Ada isian yang belum disimpan</b><div class="small muted">${s.for === "new" ? "Acara baru" : "Edit acara"}: ${esc(s.nama || "tanpa nama")} · ${esc(new Date(s.at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</div></div><a class="btn gold" href="${url}">Lanjutkan</a><button class="btn icon ghost" data-act="buangdraft" title="Buang isian">${ic("trash")}</button></div>`;
+}
 let draft = null;
 function blankOrder() {
   return { id: uid(), dibuat: Date.now(), tanggal: "", nama: "", ig: "", tiktok: "", bapak: "", ibu: "", hp: "", dsn: "", rt: "", rw: "", desa: "", kec: "", kab: "", lokasiAkad: "", jamAkad: "", jamResepsi: "", acaraMalam: false, lokasiKe: "", keterangan: "", lokasi: null, kotak: null, paketMode: "", jenisAcara: "both", alamatLain: "", mapsLink: "", wilayahId: (db && db.wilayah[0]?.id) || "w1", paketId: "", paketNama: "", hargaPaket: 0, isiPaket: "", dekor: "", gaun: [{ baju: "", pasangan: "", hijab: "" }], gaunCatatan: "", melati: "", melatiReq: "", melatiHarga: 0, mc: "", foto: "", shot: "", hena: "", crew: [], tambahan: [], potongan: [], transport: 0, bayar: [], nb: "", jadwalMakeup: "", perlengkapan: "", batal: false, absen: {}, cek: {} };
@@ -575,14 +610,14 @@ function vForm(id) {
   if (!draft || draft._for !== (id || "new")) {
     const src = id ? db.orders.find(o => o.id === id) : null;
     if (id && !src) return `<div class="card empty">Data tidak ditemukan.</div>`;
-    draft = src ? JSON.parse(JSON.stringify(src)) : blankOrder(); draft._for = id || "new";
+    draft = startDraft(src ? JSON.parse(JSON.stringify(src)) : blankOrder(), id || "new");
   }
   draft._open = draft._open || {}; ensureKotak(draft); if (!lokOf(draft).length) draft.lokasi = [newLok()];
   const byRole = r => db.tim.filter(t => t.aktif !== false && t.peran === r).map(t => t.nama);
   const has = (...k) => k.some(x => { const v = draft[x]; return Array.isArray(v) ? v.length : (typeof v === "number" ? v : String(v || "").trim()); });
   // Bagian yang bisa dilipat: terbuka bila sudah ada isinya, atau sesuai pilihan terakhir pengguna
   const sec = (key, n, t, body, open = true, hint = "") => `<details class="card fsec" data-sec="${key}" ${(draft._open[key] ?? open) ? "open" : ""}><summary class="hd"><span class="n">${n}</span><h2>${t}</h2>${hint ? `<span class="muted small hint">${hint}</span>` : ""}<svg class="i chev"><use href="#i-right"/></svg></summary>${body}</details>`;
-  return `${mtop()}<a class="back" href="${id ? "#/acara/" + id : "#/dashboard"}">${ic("left")}${id ? "Detail" : "Dashboard"}</a>
+  return `${mtop()}${draft._restored ? `<div class="card restore"><span class="grow">${ic("check")} Isian yang belum disimpan (${esc(new Date(draft._restored).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}) sudah dipulihkan.</span><button type="button" class="btn sm ghost" data-act="ulangform">Mulai dari awal</button></div>` : ""}<a class="back" href="${id ? "#/acara/" + id : "#/dashboard"}">${ic("left")}${id ? "Detail" : "Dashboard"}</a>
   <div class="top"><div><h1>${id ? "Edit acara" : "Acara baru"}</h1><p>Isi yang perlu saja — sisanya bisa dilengkapi nanti.</p></div></div>
   <form id="oform" autocomplete="off" onsubmit="return false">
   ${sec("p", 1, "Pengantin", `<div class="fs"><div class="grid g3">${fi("nama", "Nama manten", "mis. Ana & Rois")}${fi("tanggal", "Tanggal acara", "", "date")}${fi("hp", "No. HP / WA", "08xx", "tel")}</div>
@@ -697,7 +732,7 @@ function kotakOpts(b) {
   const m = sectionCatalog(), K = db.katalog, from = h => [...(m.get(h) || [])];
   const addon = kat => db.addons.filter(a => a.kategori !== "Biaya Tambahan" && (!kat || kat.includes(a.kategori))).map(addonLabel);
   switch (b.k) {
-    case "gaun": return [...optList("Gaun — jadi baris baru", K.gaun), ...optList("+ Pasangan / aksesoris — disambung ke gaun terakhir", K.pasangan, "p"), ...optList("Hijab — disambung ke gaun terakhir", K.hijab, "h")];
+    case "gaun": return [...optList("Gaun — jadi baris baru", K.gaun), ...optList("+ Pasangan / aksesoris — disambung ke gaun terakhir", K.pasangan, "p"), ...optList("Hijab — disambung ke gaun terakhir", K.hijab, "h"), ...optList("Ukuran — disambung ke gaun terakhir", K.ukuran || [], "u")];
     case "melati": return [...optList("Jenis melati — jadi baris baru", K.melati), ...optList("Request — disambung ke melati terakhir", ["monte silver", "tutup sanggul", "ronce melati tibo dodo"], "r")];
     case "dekor": return [...optList("Dekor dari paket", from("dekor")), ...optList("Paket tambahan", addon(["Paket Tambahan"]))];
     case "efek": return optList("Efek & hiburan dari paket", from("efek & hiburan"));
@@ -713,9 +748,10 @@ function kotakOpts(b) {
 /* tambahkan pilihan ke kotak: baris baru, atau sambung ke baris terakhir (pasangan / hijab / request) */
 function applyOpt(b, val) {
   const i = val.indexOf("|"), kind = val.slice(0, i), x = val.slice(i + 1), L = lines(b.isi);
-  if (kind === "n" || !L.length) L.push(kind === "p" ? x : kind === "h" ? `(${x})` : x);
+  if (kind === "n" || !L.length) L.push(kind === "p" ? x : kind === "h" ? `(${x})` : kind === "u" ? `ukuran ${x}` : x);
   else if (kind === "p") L[L.length - 1] += ` + ${x}`;
   else if (kind === "h") L[L.length - 1] += `, (${x})`;
+  else if (kind === "u") L[L.length - 1] += `, ukuran ${x}`;
   else if (kind === "r") L[L.length - 1] = /\(request /.test(L[L.length - 1]) ? L[L.length - 1].replace(/\)$/, ` + ${x})`) : L[L.length - 1] + ` (request ${x})`;
   b.isi = L.join("\n");
 }
@@ -768,7 +804,7 @@ function timFields() {
 /* Pemilih tim cepat: cari, saring per peran, centang, simpan (seperti versi lama) */
 function pickTeam(ids, tanggal, exceptId, onSave) {
   const sel = new Set(ids); let q = "", role = "Semua";
-  const roles = ["Semua", ...ROLES.filter(r => db.tim.some(t => t.peran === r && t.aktif !== false))];
+  const roles = ["Semua", ...allRoles().filter(r => db.tim.some(t => t.peran === r && t.aktif !== false))];
   modal(`<h2>Pilih tim bertugas</h2>
     <div class="search" style="margin-bottom:10px">${ic("search")}<input class="in" id="pq" placeholder="Cari nama…" autocomplete="off"></div>
     <div class="tabs" id="pr">${roles.map(r => `<button type="button" class="tab ${r === role ? "on" : ""}" data-r="${esc(r)}">${esc(r)}</button>`).join("")}</div>
@@ -797,7 +833,7 @@ function updTotal() {
   el.innerHTML = m.length ? `<button type="button" class="miss" data-act="showmiss" title="${esc(m.join(", "))}">⚠ ${m.length} belum diisi</button>` : `<span class="ok-mini">✓ Siap dikirim</span>`;
 }
 let _pv = 0;
-function updatePreview() { clearTimeout(_pv); _pv = setTimeout(() => { const el = $("#formWA"); if (el && draft) el.innerHTML = waFmt(waCrew(draft)); }, 120); }
+function updatePreview() { saveDraftSoon(); clearTimeout(_pv); _pv = setTimeout(() => { const el = $("#formWA"); if (el && draft) el.innerHTML = waFmt(waCrew(draft)); }, 120); }
 function rerenderPart(id, fn) { const el = $("#" + id); if (el) { el.innerHTML = fn(); growAll(el); } if (draft) updatePreview(); }
 /* kotak isi paket ikut memanjang sesuai tulisan */
 const grow = el => { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; };
@@ -808,7 +844,7 @@ function saveForm() {
   const o = JSON.parse(JSON.stringify(draft)); delete o._for; delete o._open;
   const i = db.orders.findIndex(x => x.id === o.id);
   if (i >= 0) db.orders[i] = o; else db.orders.push(o);
-  save(); draft = null; toast("Tersimpan"); location.hash = "#/acara/" + o.id;
+  save(); clearTimeout(_ds); clearDraft(); draft = null; toast("Tersimpan"); location.hash = "#/acara/" + o.id;
 }
 
 /* ---------- CALENDAR ---------- */
@@ -833,19 +869,19 @@ function vTim() {
   const byRole = groupBy(db.tim, "peran");
   return `${mtop()}<div class="top"><div><h1>Tim</h1><p>Jadwal tugas tiap anggota tim</p></div><button class="btn gold" data-act="addtim">${ic("plus")}Anggota baru</button></div>
   ${db.tim.length ? "" : `<div class="card empty">${ic("users")}<div>Belum ada anggota tim.</div><div class="small">Tekan <b>Anggota baru</b>, import dari Excel, atau Pengaturan → Data & Backup → <b>Kembalikan data awal Harvy</b>.</div></div>`}
-  <div class="grid g2">${ROLES.filter(r => byRole[r]).map(r => `<div class="card"><h3>${r}</h3>${byRole[r].map(p => { const j = jobs(p.id), up = j.filter(o => o.tanggal >= t); return `<div class="li"><div class="avatar">${esc(p.nama[0] || "?")}</div><div class="grow"><div class="t">${esc(p.nama)} ${p.aktif === false ? '<span class="pill">nonaktif</span>' : ""}</div><div class="small muted">${up.length ? `Berikutnya: ${esc(up[0].nama)} · ${fmtD(up[0].tanggal, { day: "numeric", month: "short" })}` : "Belum ada jadwal"} · ${j.length} total tugas</div></div><button class="btn sm" data-act="timjobs" data-id="${p.id}">Jadwal</button><button class="btn icon ghost" data-act="edittim" data-id="${p.id}">${ic("edit")}</button></div>`; }).join("")}</div>`).join("")}</div>`;
+  <div class="grid g2">${allRoles().filter(r => byRole[r]).map(r => `<div class="card"><h3>${r}</h3>${byRole[r].map(p => { const j = jobs(p.id), up = j.filter(o => o.tanggal >= t); return `<div class="li"><div class="avatar">${esc(p.nama[0] || "?")}</div><div class="grow"><div class="t">${esc(p.nama)} ${p.aktif === false ? '<span class="pill">nonaktif</span>' : ""}</div><div class="small muted">${up.length ? `Berikutnya: ${esc(up[0].nama)} · ${fmtD(up[0].tanggal, { day: "numeric", month: "short" })}` : "Belum ada jadwal"} · ${j.length} total tugas</div></div><button class="btn sm" data-act="timjobs" data-id="${p.id}">Jadwal</button><button class="btn icon ghost" data-act="edittim" data-id="${p.id}">${ic("edit")}</button></div>`; }).join("")}</div>`).join("")}</div>`;
 }
 function timModal(p) {
   const isNew = !p; p = p || { id: uid(), nama: "", peran: "Crew Rias", hp: "", aktif: true };
   modal(`<h2>${isNew ? "Anggota baru" : "Edit anggota"}</h2><div class="fs">
     <label class="f">Nama<input class="in" id="tn" value="${esc(p.nama)}"></label>
-    <label class="f">Peran<select class="in" id="tr">${ROLES.map(r => `<option ${r === p.peran ? "selected" : ""}>${r}</option>`).join("")}</select></label>
+    <label class="f">Jabatan<input class="in" id="tr" list="dl-roles" value="${esc(p.peran)}" placeholder="Pilih dari daftar atau ketik sendiri" autocomplete="off"><span class="small muted" style="font-weight:400">Tidak ada di daftar? Ketik jabatan baru, mis. Koordinator, Driver.</span></label>${dl("dl-roles", allRoles())}
     <label class="f">No. HP<input class="in" id="th" type="tel" value="${esc(p.hp)}"></label>
     <label class="toggle"><input type="checkbox" id="ta" ${p.aktif !== false ? "checked" : ""}>Aktif</label></div>
     <div class="row" style="margin-top:16px">${isNew ? "" : `<button class="btn danger" id="tdel">${ic("trash")}Hapus</button>`}<span class="grow"></span><button class="btn" data-close>Batal</button><button class="btn gold" id="tsave">Simpan</button></div>`,
     (m, close) => {
       $("#tn", m).focus();
-      $("#tsave", m).onclick = () => { const nama = $("#tn", m).value.trim(); if (!nama) return toast("Nama wajib diisi"); Object.assign(p, { nama, peran: $("#tr", m).value, hp: $("#th", m).value.trim(), aktif: $("#ta", m).checked }); if (isNew) db.tim.push(p); save(); close(); toast("Tim tersimpan"); if (draft && location.hash.includes("acara")) { if (isNew && !draft.crew.includes(p.id)) draft.crew.push(p.id); rerenderPart("timBox", timFields); } else route(); };
+      $("#tsave", m).onclick = () => { const nama = $("#tn", m).value.trim(); if (!nama) return toast("Nama wajib diisi"); const pr = $("#tr", m).value.trim(), baku = allRoles().find(r => r.toLowerCase() === pr.toLowerCase()); Object.assign(p, { nama, peran: baku || pr || "Lainnya", hp: $("#th", m).value.trim(), aktif: $("#ta", m).checked }); if (isNew) db.tim.push(p); save(); close(); toast("Tim tersimpan"); if (draft && location.hash.includes("acara")) { if (isNew && !draft.crew.includes(p.id)) draft.crew.push(p.id); rerenderPart("timBox", timFields); } else route(); };
       $("#tdel", m) && ($("#tdel", m).onclick = async () => { close(); if (await confirmBox(`Hapus ${p.nama} dari tim?`)) { db.tim = db.tim.filter(x => x.id !== p.id); save(); route(); } });
     });
 }
@@ -866,7 +902,7 @@ function vSettings() {
     ${db.paket.filter(p => p.wilayahId === w.id).map(p => `<div class="li"><div class="grow"><div class="t">${esc(p.nama)}</div><div class="small muted">${esc(p.deskripsi || "")}</div></div><b>${rpShort(p.harga)}</b><button class="btn icon ghost" data-act="editpaket" data-id="${p.id}">${ic("edit")}</button></div>`).join("") || `<div class="muted small">Belum ada paket.</div>`}</div>`).join("") + `<button class="btn" data-act="addwil">${ic("plus")}Tambah wilayah</button>`;
   if (setTab === "addons") body = `<div class="row" style="margin-bottom:12px"><button class="btn gold" data-act="addaddon">${ic("plus")}Item baru</button></div>` + Object.entries(groupBy(db.addons, "kategori")).map(([k, arr]) => `<div class="card" style="margin-bottom:14px"><h3>${esc(k)}</h3>${arr.map(a => `<div class="li"><div class="grow"><div class="t">${esc(a.item)}</div><div class="small muted">${esc([a.satuan, a.ket].filter(Boolean).join(" · "))}</div></div><b>${rp(a.harga)}</b><button class="btn icon ghost" data-act="editaddon" data-id="${a.id}">${ic("edit")}</button></div>`).join("")}</div>`).join("");
   if (setTab === "tim") body = `<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Anggota tim (${db.tim.length})</h2><div class="row"><a class="btn sm" href="#/tim">${ic("cal")}Jadwal tim</a><button class="btn gold sm" data-act="addtim">${ic("plus")}Anggota</button></div></div>${db.tim.map(p => `<div class="li"><div class="avatar">${esc(p.nama[0] || "?")}</div><div class="grow"><div class="t">${esc(p.nama)}</div><div class="small muted">${esc(p.peran)}${p.hp ? " · " + esc(p.hp) : ""}${p.aktif === false ? " · nonaktif" : ""}</div></div><button class="btn icon ghost" data-act="edittim" data-id="${p.id}">${ic("edit")}</button></div>`).join("")}</div>`;
-  if (setTab === "katalog") body = `<div class="card"><h2>Pilihan cepat di form</h2><p class="small muted">Muncul di tombol <b>＋ Pilih</b> pada kotak-kotak form acara. Satu baris = satu pilihan.</p><div class="grid g2">${[["gaun", "Gaun"], ["pasangan", "Pasangan / aksesoris"], ["hijab", "Hijab / keterangan"], ["melati", "Jenis melati"], ["nb", "Catatan (Nb) yang sering dipakai"], ["makeup", "Jadwal make up yang sering dipakai"]].map(([k, l]) => `<label class="f">${l}<textarea class="in" rows="7" data-kat="${k}">${esc(db.katalog[k].join("\n"))}</textarea></label>`).join("")}</div></div>`;
+  if (setTab === "katalog") body = `<div class="card"><h2>Pilihan cepat di form</h2><p class="small muted">Muncul di tombol <b>＋ Pilih</b> pada kotak-kotak form acara. Satu baris = satu pilihan.</p><div class="grid g2">${[["gaun", "Gaun"], ["pasangan", "Pasangan / aksesoris"], ["hijab", "Hijab / keterangan"], ["ukuran", "Ukuran gaun"], ["melati", "Jenis melati"], ["nb", "Catatan (Nb) yang sering dipakai"], ["makeup", "Jadwal make up yang sering dipakai"]].map(([k, l]) => `<label class="f">${l}<textarea class="in" rows="7" data-kat="${k}">${esc(db.katalog[k].join("\n"))}</textarea></label>`).join("")}</div></div>`;
   if (setTab === "wa") body = `<div class="card" style="margin-bottom:14px"><h2>Bentuk pesan grup</h2><label class="f">Format<select class="in" data-s="waFormat"><option value="briefing" ${s.waFormat !== "klasik" ? "selected" : ""}>Briefing rapi ber-emoji (📅 ✨ 📍 👗 👥)</option><option value="klasik" ${s.waFormat === "klasik" ? "selected" : ""}>Klasik (*Nama* : … seperti pesan grup lama)</option></select></label></div><div class="card"><h2>Penutup pesan grup</h2><p class="small muted">Ditempel otomatis di bawah setiap pesan untuk grup kru. Pakai *tebal* dan _miring_ ala WhatsApp.</p><textarea class="in" rows="6" data-s="footer">${esc(s.footer)}</textarea>
     <div class="hr"></div><h3>Kolom yang tampil di pesan grup (bawaan)</h3><div class="row" style="gap:16px">${WA_FIELDS.map(([k, l]) => `<label class="toggle"><input type="checkbox" data-wshow="${k}" ${s.waShow[k] ? "checked" : ""}>${l}</label>`).join("")}</div></div>`;
   if (setTab === "data") body = `${keamananCard()}<div class="grid g2"><div class="card"><h2>Excel</h2><p class="small muted">File Excel rapi berisi sheet <b>Acara, Tim, Paket, Perlengkapan</b>. Bisa dibuka & diedit di Excel / Google Sheets, lalu di-import lagi. File <b>Database_Harvy_Wedding.xlsx</b> asli juga bisa di-import untuk memperbarui paket & perlengkapan.</p><div class="row"><button class="btn gold" data-act="exportxlsx">${ic("down")}Export ke Excel (.xlsx)</button><label class="btn">${ic("up")}Import dari Excel<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="importXlsx" hidden></label></div></div>
@@ -959,7 +995,7 @@ function acaraCols() {
     { h: "Keterangan", w: 30, type: "wrap", get: o => o.keterangan || "", set: (o, v) => { o.keterangan = sv(v); } },
     { h: "Kotak lain", w: 30, type: "wrap", get: o => (o.kotak || []).filter(b => !KOTAK.some(([k]) => k === b.k) && lines(b.isi).length).map(b => `${b.judul || "Lainnya"}:\n${isiKotak(b)}`).join("\n\n"),
       set: (o, v) => { ensureKotak(o); o.kotak = o.kotak.filter(b => KOTAK.some(([k]) => k === b.k)); sv(v).split(/\n\s*\n/).forEach(bl => { const L2 = lines(bl); if (!L2.length) return; const head = /:$/.test(L2[0]) ? L2.shift().replace(/:$/, "") : "Lainnya"; o.kotak.push({ k: "c_" + uid(), judul: head, isi: L2.join("\n") }); }); } },
-    ...ROLES.map(r => ({ h: "Tim: " + r, w: 18, type: "wrap", role: r, get: o => teamOf(o).filter(t => t.peran === r).map(t => t.nama).join("\n") })),
+    ...allRoles().map(r => ({ h: "Tim: " + r, w: 18, type: "wrap", role: r, get: o => teamOf(o).filter(t => t.peran === r).map(t => t.nama).join("\n") })),
     { h: "Status", w: 14, get: o => statusOf(o)[0] },
     { h: "Selesai (arsip)", w: 10, get: o => o.selesai ? "Ya" : "", set: (o, v) => { o.selesai = yaTidak(v); } },
     { h: "Dibatalkan", w: 10, get: o => o.batal ? "Ya" : "", set: (o, v) => { o.batal = yaTidak(v); } },
@@ -1046,7 +1082,7 @@ async function importExcel(file) {
       const on = id => $("#" + id, m)?.checked; const hasil = [];
       if (paket && on("imP")) { wilayah.forEach(w => { if (!db.wilayah.some(x => x.id === w.id)) db.wilayah.push(w); }); db.paket = paket; hasil.push(`${paket.length} paket`); }
       if (addons && on("imD")) { db.addons = addons; hasil.push(`${addons.length} perlengkapan`); }
-      if (tim && on("imT")) { tim.forEach(r => { if (!sv(r["Nama"])) return; const id = sv(r[ID]); let t = db.tim.find(x => x.id === id) || db.tim.find(x => normNama(x.nama) === normNama(r["Nama"])); if (!t) { t = { id: uid(), nama: "", peran: "Lainnya", hp: "", aktif: true }; db.tim.push(t); } Object.assign(t, { nama: sv(r["Nama"]), peran: ROLES.includes(sv(r["Peran"])) ? sv(r["Peran"]) : "Lainnya", hp: hpText(r["No HP"]), aktif: !/^t/i.test(sv(r["Aktif"])) }); }); hasil.push(`${tim.length} anggota tim`); }
+      if (tim && on("imT")) { tim.forEach(r => { if (!sv(r["Nama"])) return; const id = sv(r[ID]); let t = db.tim.find(x => x.id === id) || db.tim.find(x => normNama(x.nama) === normNama(r["Nama"])); if (!t) { t = { id: uid(), nama: "", peran: "Lainnya", hp: "", aktif: true }; db.tim.push(t); } Object.assign(t, { nama: sv(r["Nama"]), peran: sv(r["Peran"]) || "Lainnya", hp: hpText(r["No HP"]), aktif: !/^t/i.test(sv(r["Aktif"])) }); }); hasil.push(`${tim.length} anggota tim`); }
       if (acara && on("imA")) {
         let n = 0;
         acara.forEach(rec => {
@@ -1055,7 +1091,7 @@ async function importExcel(file) {
           if (!o) { o = blankOrder(); if (/^[\w-]+$/.test(sv(rec[ID]))) o.id = sv(rec[ID]); }
           toKotak(o); toLokasi(o); ensureKotak(o);
           A.forEach(c => { if (c.set && c.h in rec) c.set(o, rec[c.h], rec); });
-          const roleCols = A.filter(c => c.role && c.h in rec);
+          const roleCols = [...A.filter(c => c.role && c.h in rec), ...Object.keys(rec).filter(h => /^Tim: /.test(h) && !A.some(c => c.h === h)).map(h => ({ h, role: h.slice(5).trim() }))];
           if (roleCols.length) {
             o.crew = [];
             roleCols.forEach(c => lines(sv(rec[c.h]).replace(/,/g, "\n")).forEach(nama => { let t = db.tim.find(x => normNama(x.nama) === normNama(nama)); if (!t) { t = { id: uid(), nama, peran: c.role, hp: "", aktif: true }; db.tim.push(t); } if (!o.crew.includes(t.id)) o.crew.push(t.id); }));
@@ -1332,7 +1368,7 @@ function route() {
   let html, cur = parts[0];
   if (parts[0] !== "acara" || (parts[1] !== "baru" && parts[2] !== "edit")) draft = null;
   if (parts[0] === "acara" && parts[1] && parts[1] !== "baru" && isArsip(db.orders.find(o => o.id === parts[1]) || {})) cur = "arsip";
-  if (parts[0] === "acara" && parts[1] === "baru") { if (!draft) { draft = blankOrder(); draft._for = "new"; const tg = new URLSearchParams(qs).get("tgl"); if (tg) draft.tanggal = tg; } html = vForm(); }
+  if (parts[0] === "acara" && parts[1] === "baru") { if (!draft) { draft = startDraft(blankOrder(), "new"); const tg = new URLSearchParams(qs).get("tgl"); if (tg && !draft._restored) draft.tanggal = tg; } html = vForm(); }
   else if (parts[0] === "acara" && parts[2] === "edit") html = vForm(parts[1]);
   else if (parts[0] === "acara" && parts[1]) html = vDetail(parts[1]);
   else if (parts[0] === "acara") html = vAcara();
@@ -1346,7 +1382,7 @@ function route() {
   if ($("#snapList")) loadKeamanan();
   if (draft) { updTotal(); updatePreview(); }
 }
-window.addEventListener("hashchange", () => { $$(".modal-bg").forEach(m => m.remove()); route(); window.scrollTo(0, 0); });
+window.addEventListener("hashchange", () => { if (draft) saveDraftNow(); $$(".modal-bg").forEach(m => m.remove()); route(); window.scrollTo(0, 0); });
 
 /* ---------- EVENTS ---------- */
 document.addEventListener("input", e => {
@@ -1424,7 +1460,9 @@ document.addEventListener("click", async e => {
       catch { el.focus(); toast("Tekan lama kolomnya lalu pilih Tempel / Paste"); }
       break; }
     case "saveform": saveForm(); break;
-    case "cancelform": { const back = draft && draft._for !== "new" ? "#/acara/" + draft._for : "#/dashboard"; draft = null; location.hash = back; break; }
+    case "cancelform": { if (draftDirty() && !(await confirmBox("Isian yang belum disimpan akan dibuang.", "Buang isian"))) break; const back = draft && draft._for !== "new" ? "#/acara/" + draft._for : "#/dashboard"; clearTimeout(_ds); clearDraft(); draft = null; location.hash = back; break; }
+    case "ulangform": { if (!(await confirmBox("Isian yang dipulihkan akan dibuang dan form dimulai dari awal.", "Mulai dari awal"))) break; const f = draft._for; clearTimeout(_ds); clearDraft(); draft = null; if (f === "new") route(); else { const src = db.orders.find(o => o.id === f); draft = startDraft(JSON.parse(JSON.stringify(src)), f); route(); } break; }
+    case "buangdraft": if (await confirmBox("Isian acara yang belum disimpan akan dibuang.", "Buang")) { clearDraft(); route(); } break;
     case "copy": copyText(curWA); break;
     case "share": shareText(curWA); break;
     case "sendcrew": shareText(waCrew(db.orders.find(o => o.id === id))); break;
@@ -1464,11 +1502,11 @@ document.addEventListener("click", async e => {
     case "resetdb": if (await confirmBox("Daftar tim resmi Harvy, paket, wilayah & perlengkapan dikembalikan ke data awal (Excel). Tim/paket buatan sendiri dihapus. Acara tidak dihapus.", "Kembalikan")) {
         await snapshot("Sebelum kembalikan data awal", true);
         const tim0 = rosterList(); db.orders.forEach(o => { o.crew = (o.crew || []).map(id => { const t0 = timById(id), m = t0 && tim0.find(x => normNama(x.nama) === normNama(t0.nama)); return m ? m.id : null; }).filter(Boolean); });
-        db.tim = tim0; db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); db.settings.rosterV3 = true; save(); route(); toast("Data awal Harvy dikembalikan"); } break;
+        db.tim = tim0; db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); db.settings.rosterV4 = true; save(); route(); toast("Data awal Harvy dikembalikan"); } break;
     case "wipeacara": if (await confirmBox(`${db.orders.length} acara (termasuk arsip) akan dihapus permanen. Sudah backup?`, "Hapus semua acara")) { await snapshot("Sebelum hapus semua acara", true); db.orders = []; arsipState.sel.clear(); save(); route(); toast("Semua acara dihapus"); } break;
     case "wipe": if (await confirmBox("SEMUA acara, tim, paket, wilayah & perlengkapan akan dihapus permanen — aplikasi mulai dari kosong. Sudah backup?", "Kosongkan semua")) {
         await snapshot("Sebelum kosongkan semua data", true);
-        Object.assign(db, { orders: [], tim: [], paket: [], wilayah: [], addons: [] }); db.settings.rosterV3 = true; arsipState.sel.clear(); save(); route(); toast("Semua data dikosongkan"); } break;
+        Object.assign(db, { orders: [], tim: [], paket: [], wilayah: [], addons: [] }); db.settings.rosterV4 = true; arsipState.sel.clear(); save(); route(); toast("Semua data dikosongkan"); } break;
   }
 });
 function rekapModal(text) {
@@ -1497,6 +1535,8 @@ function showUpdate() {
   document.body.appendChild(b); $("#updgo").onclick = () => { if (draft) { toast("Simpan form dulu, lalu muat ulang"); return; } location.reload(); };
 }
 
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && draft) saveDraftNow(); });
+window.addEventListener("pagehide", () => { if (draft) saveDraftNow(); });
 /* ---------- INIT ---------- */
 (async function boot() {
   // ambil data dari database perangkat (IndexedDB); pakai yang paling baru antara IndexedDB & cadangan localStorage

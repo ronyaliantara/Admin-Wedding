@@ -1,7 +1,7 @@
 "use strict";
 const SEED = window.HARVY_SEED;
 const LOGO_DEFAULT = "icons/logo.jpg";
-const APP_VERSION = "69";
+const APP_VERSION = "70";
 const KEY = "harvy_wo_db_v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -21,14 +21,15 @@ const parseD = s => { if (!s) return null; const [y, m, d] = s.split("-").map(Nu
 const fmtD = (s, o = { weekday: "long", day: "numeric", month: "long", year: "numeric" }) => s ? parseD(s).toLocaleDateString("id-ID", o) : "Belum ada tanggal";
 const daysTo = s => s ? Math.round((parseD(s) - parseD(todayStr())) / 864e5) : null;
 const lines = t => String(t || "").split("\n").map(x => x.trim()).filter(Boolean);
-const ROLES = ["MUA", "Asisten", "Crew Rias", "Manager", "Admin", "MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone", "Dekor", "Sopir", "Lainnya"];
+const ROLES = ["MUA", "Manager", "Asisten", "Admin", "Crew Rias", "Packing", "MC", "Foto", "Video", "Hena", "Dry Smoke", "Cucuk Lampah", "Electone", "Dekor", "Sopir", "Lainnya"];
 /* Daftar tim Harvy (bisa diubah di Pengaturan → Tim) */
 const ROSTER = {
   "MUA": ["Harvy"],
-  "Asisten": ["Puput", "Nanda"],
-  "Crew Rias": ["Buk Um", "Sari", "Maya", "Nisaul", "Isti", "Rina", "Lany", "Marisna", "Lia", "Dewi", "Nadin", "Isa", "Kosna", "Tiya"],
   "Manager": ["Hary"],
+  "Asisten": ["Puput", "Nanda"],
   "Admin": ["Yenny", "Efi", "Gita"],
+  "Crew Rias": ["Buk Um", "Sari", "Maya", "Nisaul", "Isti", "Rina", "Lany", "Marisna", "Lia", "Dewi", "Nadin", "Isa", "Kosna", "Tiya"],
+  "Packing": ["Iis", "Nur Aini"],
   "MC": ["Syafi'i", "Rozy", "Rully", "Shofi", "Supandi", "Andik", "Mudi", "Yazid", "Teguh", "Dimas", "Sukir", "Siti", "Sony", "Malik", "Adhim"],
   "Foto": ["Harry Photografer", "Zubeth", "Aang Angkasa", "Panoramic", "Bey (JRA)", "Jeck Potret"],
   "Video": ["Cloudy", "MD"],
@@ -87,7 +88,7 @@ function load() {
   try { importOldApp(d); } catch (e) { console.warn("Import data lama gagal", e); }
   d.orders.forEach(o => linkLegacy(d, o));
   removeDemoPeople(d); mergeDupes(d);
-  d.settings.rosterV4 = true;
+  d.settings.rosterV5 = true;
   return d;
 }
 /* Pindahkan data dari versi lama (Mahligai WO) yang tersimpan di perangkat ini — hanya sekali */
@@ -149,7 +150,7 @@ function importOldApp(d) {
 }
 function migrate(d) {
   const def = defaultDB();
-  const needRoster = !(d.settings && d.settings.rosterV4);
+  const needRoster = !(d.settings && d.settings.rosterV5);
   for (const k of ["wilayah", "paket", "addons", "tim", "orders"]) if (!Array.isArray(d[k])) d[k] = def[k];
   d.settings = Object.assign({}, def.settings, d.settings || {});
   d.settings.waShow = Object.assign({}, def.settings.waShow, d.settings.waShow || {});
@@ -164,9 +165,10 @@ function migrate(d) {
   }
   if (needRoster) {
     // perangkat lama (sudah punya daftar tim): hanya tambah orang baru di daftar resmi (Manager: Hary); jangan isi ulang tim yang sengaja dikosongkan
-    const baru = d.settings.rosterV3 ? (d.tim.length ? rosterList().filter(r => r.peran === "Manager") : []) : rosterList();
+    const lama = d.settings.rosterV3 || d.settings.rosterV4, peranBaru = d.settings.rosterV4 ? ["Packing"] : ["Manager", "Packing"];
+    const baru = lama ? (d.tim.length ? rosterList().filter(r => peranBaru.includes(r.peran)) : []) : rosterList();
     baru.forEach(r => { if (!d.tim.some(x => normNama(x.nama) === normNama(r.nama))) d.tim.push(r); });
-    d.settings.rosterV4 = true;
+    d.settings.rosterV5 = true;
   }
   d.orders.forEach(o => linkLegacy(d, o));
   canonTim(d);
@@ -1502,11 +1504,11 @@ document.addEventListener("click", async e => {
     case "resetdb": if (await confirmBox("Daftar tim resmi Harvy, paket, wilayah & perlengkapan dikembalikan ke data awal (Excel). Tim/paket buatan sendiri dihapus. Acara tidak dihapus.", "Kembalikan")) {
         await snapshot("Sebelum kembalikan data awal", true);
         const tim0 = rosterList(); db.orders.forEach(o => { o.crew = (o.crew || []).map(id => { const t0 = timById(id), m = t0 && tim0.find(x => normNama(x.nama) === normNama(t0.nama)); return m ? m.id : null; }).filter(Boolean); });
-        db.tim = tim0; db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); db.settings.rosterV4 = true; save(); route(); toast("Data awal Harvy dikembalikan"); } break;
+        db.tim = tim0; db.wilayah = clone(SEED.wilayah); db.paket = clone(SEED.paket); db.addons = clone(SEED.addons); db.settings.rosterV5 = true; save(); route(); toast("Data awal Harvy dikembalikan"); } break;
     case "wipeacara": if (await confirmBox(`${db.orders.length} acara (termasuk arsip) akan dihapus permanen. Sudah backup?`, "Hapus semua acara")) { await snapshot("Sebelum hapus semua acara", true); db.orders = []; arsipState.sel.clear(); save(); route(); toast("Semua acara dihapus"); } break;
     case "wipe": if (await confirmBox("SEMUA acara, tim, paket, wilayah & perlengkapan akan dihapus permanen — aplikasi mulai dari kosong. Sudah backup?", "Kosongkan semua")) {
         await snapshot("Sebelum kosongkan semua data", true);
-        Object.assign(db, { orders: [], tim: [], paket: [], wilayah: [], addons: [] }); db.settings.rosterV4 = true; arsipState.sel.clear(); save(); route(); toast("Semua data dikosongkan"); } break;
+        Object.assign(db, { orders: [], tim: [], paket: [], wilayah: [], addons: [] }); db.settings.rosterV5 = true; arsipState.sel.clear(); save(); route(); toast("Semua data dikosongkan"); } break;
   }
 });
 function rekapModal(text) {
